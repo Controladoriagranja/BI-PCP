@@ -74,19 +74,15 @@
                         <span>${item.label}</span>
                     </a>
                 `).join("")}
-            </nav><nav class="pcp-support-nav" aria-label="Ferramentas PCP"><a href="operacao.html">Consultas operacionais</a><a href="consultas.html">Consultas do modelo</a><a href="formulas.html">Fórmulas</a><a href="index.html?ajuda=1">Ajuda</a></nav>
+            </nav><nav class="pcp-support-nav" aria-label="Ferramentas PCP"><a href="diagnostico.html">Teste de conexão</a><a href="operacao.html">Consultas operacionais</a><a href="consultas.html">Consultas do modelo</a><a href="formulas.html">Fórmulas</a><a href="index.html?ajuda=1">Ajuda</a></nav>
         </aside>
     `;
 
     document.body.classList.add("has-side-nav");
     document.body.prepend(root);
-    apiGet(APP_CONFIG.endpoints.sessao).then(session => {
-        if (!session.visualiza_ajustes) return;
-        const link = document.createElement("a");
-        link.href = "ajustes.html"; link.className = "side-nav-link"+(current==="ajustes"?" active":""); if(current==="ajustes")link.setAttribute("aria-current","page");
-        link.textContent = "Ajustes manuais e PmFOB";
-        root.querySelector(".side-nav-links").appendChild(link);
-    }).catch(() => {});
+    // A API existente não possui /pcp-modelo/sessao ou edição administrativa.
+    // O menu não tenta consultar rotas inexistentes nem deduz perfil pelo Basic.
+
 
 
     const rail = root.querySelector(".side-nav-rail");

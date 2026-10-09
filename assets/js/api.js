@@ -184,7 +184,7 @@ async function requestApi(endpoint, params = {}, options = {}) {
     throw new ApiError("O serviço retornou uma resposta inválida.", response.status, "INVALID_JSON");
   }
   if (endpoint === APP_CONFIG.endpoints.dados &&
-      (data.contrato !== "pcp-resultados-api-v1" || data.fonte !== "api" || data.usa_csv_como_fonte !== false || !data.resumo || !Array.isArray(data.dados) || !Array.isArray(data.serie))) {
+      (!data.resumo || !Array.isArray(data.dados) || !Array.isArray(data.serie) || !Array.isArray(data.indicadores))) {
     throw new ApiError("Contrato PCP incompatível com a consulta preparada.", 503, "SOURCE_PENDING");
   }
   return data;

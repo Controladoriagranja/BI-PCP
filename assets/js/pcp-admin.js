@@ -1,6 +1,7 @@
 "use strict";
 (() => {
  const $=id=>document.getElementById(id);let state=null,manual=[];
+ if(!APP_CONFIG.endpoints.admin){if($('status'))$('status').textContent='Ajustes manuais ainda não disponibilizados pela API existente. Nenhuma alteração será enviada.';return;}
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  async function api(path,options={}){
   if(options.method)return apiWrite(path,JSON.parse(options.body),options.method);

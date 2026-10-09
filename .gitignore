@@ -1,0 +1,12 @@
+*.parquet
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Dependências isoladas para os testes da cópia de backend
+tests/.backend-test-deps/
+tests/frontend-previews/
+_site/
+_outputs/
+outputs/

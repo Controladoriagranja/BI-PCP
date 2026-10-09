@@ -1,0 +1,76 @@
+.pcp-layout{display:grid;gap:16px}.pcp-filter-select{width:100%;height:40px;padding:0 10px;border:1px solid var(--input);border-radius:9px;background:var(--background);color:var(--foreground);font:inherit;font-size:12px}.pcp-raw-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.pcp-raw-table th,.pcp-raw-table td{padding:11px 13px;border-bottom:1px solid var(--border);text-align:left;max-width:320px;overflow:hidden;text-overflow:ellipsis}.pcp-raw-table th{background:var(--secondary);color:var(--muted-foreground);position:sticky;top:0;font-weight:600}.pcp-table-scroll{overflow:auto;max-height:420px}.pcp-pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px}.pcp-pager>div{display:flex;gap:8px}.pcp-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin-bottom:16px}.pcp-kpi{padding:18px}.pcp-kpi>span{font-size:12px;color:var(--muted-foreground)}.pcp-kpi>strong{display:block;font-size:25px;font-weight:650;letter-spacing:-.5px;margin:10px 0;overflow-wrap:anywhere}.pcp-kpi>small{font-size:11px;line-height:1.5;color:var(--muted-foreground)}.pcp-section-head{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:16px;border-bottom:1px solid var(--border)}.pcp-section-head h2{margin:0;font-size:15px}.pcp-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.pcp-chart{height:270px;padding:12px}.pcp-cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.pcp-formula{padding:18px}.pcp-formula h3{font-size:14px;margin:0 0 8px}.pcp-formula pre{white-space:pre-wrap;font-size:11px;max-height:320px;overflow:auto;color:var(--muted-foreground)}.pcp-context-title{font-size:13px;font-weight:600;color:var(--primary);margin:18px 0 10px}.pcp-notice{padding:12px 14px;font-size:12px;line-height:1.6;margin-bottom:16px}.pcp-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pcp-admin-input{width:135px;height:36px;border:1px solid var(--input);border-radius:7px;background:var(--background);color:var(--foreground);padding:0 8px}.pcp-admin-input:disabled{opacity:.65}.pcp-admin-actions{padding:16px;display:flex;gap:12px}.pcp-mobile-label{font-size:11px;color:var(--muted-foreground)}@media(max-width:1000px){.pcp-charts{grid-template-columns:1fr}}@media(max-width:700px){.pcp-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-kpi{padding:14px}.pcp-kpi>strong{font-size:21px}.pcp-section-head{flex-wrap:wrap}.pcp-pager{flex-wrap:wrap}.pcp-chart{height:240px}}
+
+#adminConteudo nav{display:flex;gap:10px;margin:18px 0}#adminConteudo section{padding:16px;margin-bottom:16px}#adminConteudo input,#adminConteudo select{height:36px;border:1px solid var(--input);border-radius:7px;background:var(--background);color:var(--foreground);padding:0 8px;font:inherit}#adminConteudo input[type=number]{width:150px}#adminConteudo input[type=checkbox]{height:18px;accent-color:var(--primary)}#adminConteudo input:disabled{opacity:.65}#adminConteudo button{border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--foreground);padding:9px 12px;cursor:pointer}#adminConteudo button[aria-pressed=true]{background:var(--primary);color:var(--primary-foreground)}#error:not([hidden]){margin:14px 0;padding:14px;border:1px solid var(--destructive);border-radius:9px;color:var(--destructive)}#status{font-size:12px;color:var(--muted-foreground)}#adminConteudo .notice{padding:12px;font-size:12px;line-height:1.6;color:var(--muted-foreground)}#adminConteudo .search{display:flex;flex-direction:column;gap:5px;font-size:12px}#adminConteudo footer{font-size:11px;color:var(--muted-foreground);padding:16px 0}
+
+#pcpConteudo,.pcp-layout,.pcp-layout>*,.pcp-charts>*,.pcp-summary>*{min-width:0}.pcp-charts{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-table-scroll{min-width:0;max-width:100%}.pcp-chart{min-width:0;max-width:100%}@media(max-width:1000px){.pcp-charts{grid-template-columns:minmax(0,1fr)}}
+
+/* Páginas do relatório PCP; escopo limitado ao novo index. */
+.pcp-report{background:#f7f5f1;color:#342725}
+.pcp-report .app-shell{max-width:none;margin:0;padding:20px 24px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px 18px}
+.pcp-report .page-header{grid-column:1/-1;margin:0;align-items:center;padding:0 0 8px}
+.pcp-report .page-header h1{font-size:22px;line-height:1.25;margin:6px 0 0}
+.pcp-report .eyebrow{font-size:10px;color:#b17d49}
+.pcp-report .page-header p:empty{display:none}
+.pcp-report .filter-card,.pcp-report-filters{grid-column:1;grid-row:auto;align-self:start;padding:14px;position:static;margin:0}
+.pcp-report .filter-card-top{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:12px}.pcp-report .pcp-toolbar{display:flex;flex-direction:row;align-items:center;gap:8px}
+.pcp-report .filter-card p,.pcp-report-filters p{font-size:11px;line-height:1.6;color:#776e68}
+.pcp-report .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.pcp-report #pcpConteudo,.pcp-report #mensagemErro,.pcp-report #estadoConsulta,.pcp-report-notice{grid-column:1;min-width:0;margin:0}
+.pcp-report .pcp-chart{height:240px}
+.pcp-report .card{background:#fff;border:1px solid #eee9e1;box-shadow:none;border-radius:12px}
+.pcp-report .pcp-summary{gap:10px;margin-bottom:0}
+.pcp-report .pcp-kpi{padding:14px}
+.pcp-report-pagination{display:flex;align-items:center;gap:10px;font-size:11px;color:#78675f}
+.pcp-report-pagination .button{padding:5px 9px;background:transparent;color:#a98013;border:0;font-size:18px}
+.pcp-report-panels{display:grid;gap:14px;align-content:start}
+.pcp-report-panel{padding:14px;min-width:0}
+.pcp-report-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pcp-report-panel h2{font-size:11px;line-height:1.5;color:#7a1726;margin:0;font-weight:650}
+.pcp-report-legend{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:11px;color:#766f6b;margin-top:5px}
+.pcp-report-legend span{display:inline-flex;align-items:center;gap:4px}
+.pcp-report-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.pcp-report-pending{min-height:210px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;text-align:center;color:#82766e;padding:18px;font-size:12px}
+.pcp-report-pending strong{font-size:14px;color:#58443e}
+.pcp-report-pending p{margin:0;max-width:440px;line-height:1.6}
+.pcp-report-pending a{color:#7a1726}
+.pcp-measure-details{font-size:11px;flex:none;max-width:45%}
+.pcp-measure-details>summary{cursor:pointer;color:#726c69;white-space:nowrap}
+.pcp-measure-details>div{padding:12px;margin-top:8px;border:1px solid #eee7de;overflow-wrap:anywhere}
+.pcp-measure-details pre{font-size:11px;white-space:pre-wrap;max-height:240px;overflow:auto}
+.pcp-report-table-wrap{max-width:100%;overflow:auto;margin-top:12px}
+.pcp-report-table{width:100%;border-collapse:collapse;font-size:11px}
+.pcp-report-table th{white-space:nowrap;padding:7px;border-bottom:2px solid #7a1726;text-align:left;font-weight:500}
+.pcp-report-table td{padding:12px;background:#f7f5f1;color:#766c65}
+.pcp-report-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:10px 14px;align-items:end}.pcp-report-filters>h2,.pcp-report-filters>p{grid-column:1/-1;margin:0}.pcp-report-filters h2{font-size:15px;margin:0 0 12px}
+.pcp-report-filters label{display:flex;flex-direction:column;gap:5px;font-size:11px;margin:0}
+.pcp-report-filters input,.pcp-report-filters select{height:40px;width:100%;border:1px solid #ded8d0;border-radius:6px;padding:0 8px;color:#766d64;background:#f5f3ef;font:inherit}
+.pcp-report-notice{padding:14px;font-size:12px;line-height:1.6}
+.pcp-support-nav{display:grid;gap:8px;padding:16px 10px;margin-top:auto;border-top:1px solid #ffffff15;font-size:11px}
+.pcp-support-nav a{color:#cbb4b3;text-decoration:none}
+.pcp-report a:focus-visible,.pcp-report button:focus-visible,.pcp-report summary:focus-visible{outline:3px solid #cf9e25;outline-offset:3px}
+
+.pcp-report.has-side-nav .app-shell>.page-header:first-child{padding-left:58px}
+@media(max-width:767px){
+ .pcp-report .app-shell{grid-template-columns:minmax(0,1fr);padding:64px 12px 18px}
+ .pcp-report .page-header{flex-wrap:wrap;gap:10px}.pcp-report-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-report-filters>.button{grid-column:1/-1}.pcp-report .filter-card-top{flex-wrap:wrap}
+ .pcp-report .page-header h1{font-size:20px}
+ .pcp-report .filter-card,.pcp-report-filters{grid-column:1;grid-row:auto;position:static}
+ .pcp-report .filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pcp-report .pcp-toolbar{flex-direction:row;flex-wrap:wrap}
+ .pcp-report .pcp-charts{grid-template-columns:minmax(0,1fr)}
+ .pcp-report-panel>header{flex-wrap:wrap}.pcp-measure-details{max-width:100%}
+ .pcp-report-pending{min-height:180px}
+}
+.pcp-report .app-shell{width:auto;min-width:0}
+.pcp-report.has-side-nav .app-shell>.page-header:first-child{padding-left:58px}
+.pcp-report .header-toolbar{min-width:0;flex-wrap:wrap}
+.pcp-report .pcp-chart{padding:8px}
+
+/* Estado de manutenção da Visão Geral. */
+.pcp-report .pcp-maintenance{display:grid;grid-column:1;min-width:0}
+.pcp-maintenance-card{min-height:350px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.pcp-maintenance-badge{color:#7a1726;background:#f8ecee;border:1px solid #ebd7db;border-radius:24px;padding:6px 12px;font-size:10px;font-weight:650;letter-spacing:1px}
+.pcp-maintenance-card svg{width:48px;height:48px;color:#7a1726;margin:8px 0}
+.pcp-maintenance-card h2{font-size:24px;color:#342725;margin:0}
+.pcp-maintenance-card p{font-size:13px;color:#82766e;margin:0;line-height:1.6;max-width:500px}
+@media(max-width:767px){.pcp-maintenance-card{min-height:300px;padding:28px 16px}.pcp-maintenance-card h2{font-size:20px}}

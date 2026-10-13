@@ -74,3 +74,14 @@
 .pcp-maintenance-card h2{font-size:24px;color:#342725;margin:0}
 .pcp-maintenance-card p{font-size:13px;color:#82766e;margin:0;line-height:1.6;max-width:500px}
 @media(max-width:767px){.pcp-maintenance-card{min-height:300px;padding:28px 16px}.pcp-maintenance-card h2{font-size:20px}}
+/* Comparativo Frigoríficos — primeira página com dados reais. */
+.pcp-comparativo-filtros{padding:14px;grid-column:1;margin:0}
+.pcp-comparativo-filter-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.pcp-comparativo-filter-head h2{font-size:14px;margin:0}
+.pcp-comparativo-filter-head>div{display:flex;gap:8px}
+.pcp-comparativo-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pcp-comparativo-filter-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#766b64}
+.pcp-comparativo-filter-grid input,.pcp-comparativo-filter-grid select{width:100%;height:36px;border:1px solid #ded8d0;border-radius:6px;background:#f7f5f1;padding:0 10px;font:inherit;color:#342725}
+.pcp-comparativo-chart{height:285px;min-width:0;width:100%}
+.pcp-comparativo-panel{padding:12px 14px}
+@media(max-width:767px){.pcp-comparativo-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-comparativo-filter-head{flex-wrap:wrap}.pcp-comparativo-chart{height:285px}}

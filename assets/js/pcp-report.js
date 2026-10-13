@@ -31,6 +31,7 @@
  function pageLink(number,label){const params=new URLSearchParams(query);params.set('pagina',number);return '<a class="button" href="index.html?'+escape(params)+'" aria-label="'+label+'">'+(number<selected?'←':'→')+'</a>';}
  pager.innerHTML=(selected>1?pageLink(selected-1,'Página anterior'):'')+'<span>Página '+selected+' de '+group.paginas.length+'</span>'+(selected<group.paginas.length?pageLink(selected+1,'Próxima página'):'');
  document.querySelector('.header-toolbar').append(pager);
+ if(index===1&&selected===1){window.PcpComparativo.mount();return;}
  const filter=document.querySelector('.filter-card');filter.className='pcp-report-filters card';
  filter.innerHTML='<h2>Filtros</h2><p>Esta página aguarda a execução das medidas do modelo na API.</p><label>Período<input type="date" disabled aria-describedby="filtrosPendentes"></label><label>Semana<select disabled><option>Aguardando resultados</option></select></label><label>Unidade<select disabled><option>Ave Nova / Real Alimentos</option></select></label><p id="filtrosPendentes">Os filtros dos dados operacionais continuam disponíveis.</p><a class="button" href="operacao.html">Consultar dados reais</a>';
  document.getElementById('estadoConsulta').textContent='Estrutura do PBIX oficial · resultados destas medidas ainda indisponíveis na API.';

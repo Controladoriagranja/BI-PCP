@@ -30,18 +30,19 @@
  const pager=document.createElement('nav');pager.className='pcp-report-pagination';pager.setAttribute('aria-label','Páginas do relatório');
  function pageLink(number,label){const params=new URLSearchParams(query);params.set('pagina',number);return '<a class="button" href="index.html?'+escape(params)+'" aria-label="'+label+'">'+(number<selected?'←':'→')+'</a>';}
  pager.innerHTML=(selected>1?pageLink(selected-1,'Página anterior'):'')+'<span>Página '+selected+' de '+group.paginas.length+'</span>'+(selected<group.paginas.length?pageLink(selected+1,'Próxima página'):'');
- const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);if(index!==4)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
+ const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);if(index!==4&&index!==5)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
  window.PcpReportHeader={update(value){
   const field=document.getElementById('pcpUltimaAtualizacao');if(!field)return;
   const date=value?new Date(value):null;
   field.textContent=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})+' - '+date.toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour12:false}):'—';
  }};
- if(index!==1&&index!==2&&index!==3&&index!==4){
+ if(index!==1&&index!==2&&index!==3&&index!==4&&index!==5){
   let updating=false;
   async function updateHeader(){if(updating||!getPortalToken())return;updating=true;try{const data=await apiGet(APP_CONFIG.endpoints.health,{}, {silent:true});if(data.ok)window.PcpReportHeader.update(data.ultima_carga);}catch(_){}finally{updating=false;}}
   updateHeader();setInterval(()=>{if(!document.hidden)updateHeader();},60000);
  }
 
+ if(index===5){window.PcpEficiencia.mount();return;}
  if(index===1||index===2||index===3||index===4){window.PcpComparativo.mount(selected,index);return;}
  const filter=document.querySelector('.filter-card');filter.className='pcp-report-filters card';
  filter.innerHTML='<h2>Filtros</h2><p>Esta página aguarda a execução das medidas do modelo na API.</p><label>Período<input type="date" disabled aria-describedby="filtrosPendentes"></label><label>Semana<select disabled><option>Aguardando resultados</option></select></label><label>Unidade<select disabled><option>Ave Nova / Real Alimentos</option></select></label><p id="filtrosPendentes">Os filtros dos dados operacionais continuam disponíveis.</p><a class="button" href="operacao.html">Consultar dados reais</a>';

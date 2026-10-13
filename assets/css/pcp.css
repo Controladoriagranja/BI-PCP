@@ -89,17 +89,3 @@
 .pcp-header-update{display:flex;flex-direction:column;gap:4px;padding-right:16px;border-right:1px solid var(--border);flex-shrink:0}.pcp-header-update>span{font-size:11px;color:var(--muted-foreground)}.pcp-header-update>strong{font-size:13px;font-weight:650;white-space:nowrap}.pcp-comparativo-chart-scroll{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}.pcp-report .header-toolbar{gap:14px}@media(max-width:767px){.pcp-header-update{padding-right:10px}.pcp-header-update>strong{font-size:12px}}
 
 .pcp-comparativo-agrupado .pcp-comparativo-chart { height: clamp(340px, 60vh, 600px); }
-
-.pcp-detail-actions { display:flex; gap:8px; margin-bottom:12px; }
-.pcp-comparativo-dados { border-top:1px solid var(--border,#e6e0da); margin-top:8px; padding-top:14px; min-width:0; }
-.pcp-comparativo-table-head { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:10px; }
-.pcp-comparativo-table-head h3 { margin:0; font-size:13px; }
-.pcp-comparativo-table-head label { display:flex; align-items:center; gap:8px; font-size:11px; }
-.pcp-comparativo-table-head input { width:210px; padding:8px; border:1px solid var(--border,#e6e0da); border-radius:6px; background:var(--background,#fff); color:inherit; }
-.pcp-comparativo-table-scroll { overflow:auto; max-height:280px; }
-.pcp-comparativo-dados table { width:100%; border-collapse:collapse; font-size:11px; }
-.pcp-comparativo-dados th,.pcp-comparativo-dados td { padding:8px 10px; text-align:right; border-bottom:1px solid var(--border,#e6e0da); }
-.pcp-comparativo-dados th:first-child { text-align:left; white-space:nowrap; }
-.pcp-comparativo-dados thead th { position:sticky; top:0; background:var(--card,#fff); z-index:1; }
-.pcp-comparativo-table-empty { font-size:12px; color:var(--muted-foreground,#756d68); }
-@media(max-width:600px) { .pcp-comparativo-table-head { align-items:flex-start; flex-direction:column; } .pcp-comparativo-table-head label { width:100%; } .pcp-comparativo-table-head input { min-width:0; flex:1; } }

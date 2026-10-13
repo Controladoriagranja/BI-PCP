@@ -36,13 +36,13 @@
   const date=value?new Date(value):null;
   field.textContent=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})+' - '+date.toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour12:false}):'—';
  }};
- if(index!==1){
+ if(index!==1&&index!==2){
   let updating=false;
   async function updateHeader(){if(updating||!getPortalToken())return;updating=true;try{const data=await apiGet(APP_CONFIG.endpoints.health,{}, {silent:true});if(data.ok)window.PcpReportHeader.update(data.ultima_carga);}catch(_){}finally{updating=false;}}
   updateHeader();setInterval(()=>{if(!document.hidden)updateHeader();},60000);
  }
 
- if(index===1){window.PcpComparativo.mount(selected);return;}
+ if(index===1||index===2){window.PcpComparativo.mount(selected,index);return;}
  const filter=document.querySelector('.filter-card');filter.className='pcp-report-filters card';
  filter.innerHTML='<h2>Filtros</h2><p>Esta página aguarda a execução das medidas do modelo na API.</p><label>Período<input type="date" disabled aria-describedby="filtrosPendentes"></label><label>Semana<select disabled><option>Aguardando resultados</option></select></label><label>Unidade<select disabled><option>Ave Nova / Real Alimentos</option></select></label><p id="filtrosPendentes">Os filtros dos dados operacionais continuam disponíveis.</p><a class="button" href="operacao.html">Consultar dados reais</a>';
  document.getElementById('estadoConsulta').textContent='Estrutura do PBIX oficial · resultados destas medidas ainda indisponíveis na API.';

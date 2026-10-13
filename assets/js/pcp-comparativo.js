@@ -35,7 +35,7 @@ window.PcpComparativo=(()=>{
      if(!rect||!point||!Number.isFinite(point[1]))return {hideOverlap:false};
      const height=p.labelRect.height,top=Math.max(rect.y+2,Math.min(rect.y+rect.height-height-4,above?point[1]-height-10:point[1]+10));
      return {dy:top-p.labelRect.y,hideOverlap:false};
-    },label:{show:!s.surgical&&labels.length<=24,position:s.position,distance:9,fontSize:10,color:s.color,backgroundColor:s.bg,borderRadius:3,padding:[3,5],formatter:p=>percent(p.value)},data:data.serie.map(row=>row.valores.find(v=>v.unidade===s.uid)?.[s.metric]??null)}));
+    },label:{show:!s.surgical&&labels.length<=24,position:s.position,distance:9,fontSize:10,color:'#000000',backgroundColor:s.bg,borderRadius:3,padding:[3,5],formatter:p=>percent(p.value)},data:data.serie.map(row=>row.valores.find(v=>v.unidade===s.uid)?.[s.metric]??null)}));
     const numbers=series.flatMap(s=>s.data).filter(v=>v!=null&&Number.isFinite(v));
     const min=numbers.length?Math.floor((Math.min(...numbers)-.02)*20)/20:0,max=numbers.length?Math.ceil((Math.max(...numbers)+.02)*20)/20:1;
     const element=chart.getDom();element.style.width=Math.max(element.parentElement.clientWidth,labels.length*32+78)+'px';chart.resize();

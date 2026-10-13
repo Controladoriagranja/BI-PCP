@@ -85,3 +85,5 @@
 .pcp-comparativo-chart{height:285px;min-width:0;width:100%}
 .pcp-comparativo-panel{padding:12px 14px}
 @media(max-width:767px){.pcp-comparativo-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-comparativo-filter-head{flex-wrap:wrap}.pcp-comparativo-chart{height:285px}}
+
+.pcp-header-update{display:flex;flex-direction:column;gap:4px;padding-right:16px;border-right:1px solid var(--border);flex-shrink:0}.pcp-header-update>span{font-size:11px;color:var(--muted-foreground)}.pcp-header-update>strong{font-size:13px;font-weight:650;white-space:nowrap}.pcp-comparativo-chart-scroll{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}.pcp-report .header-toolbar{gap:14px}@media(max-width:767px){.pcp-header-update{padding-right:10px}.pcp-header-update>strong{font-size:12px}}

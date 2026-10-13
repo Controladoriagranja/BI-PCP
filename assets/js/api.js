@@ -43,7 +43,7 @@ const ApiActivity = (() => {
 })();
 
 async function apiGet(endpoint, params = {}, options = {}) {
-  const finish = ApiActivity.begin();
+  const finish = options.silent ? () => {} : ApiActivity.begin();
   try { return await requestApi(endpoint, params, options); }
   finally { finish(); }
 }

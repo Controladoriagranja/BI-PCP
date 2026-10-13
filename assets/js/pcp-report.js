@@ -36,12 +36,13 @@
   const date=value?new Date(value):null;
   field.textContent=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})+' - '+date.toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour12:false}):'—';
  }};
- if(index!==1&&index!==2&&index!==3&&index!==4&&index!==5){
+ if(index!==1&&index!==2&&index!==3&&index!==4&&index!==5&&index!==6){
   let updating=false;
   async function updateHeader(){if(updating||!getPortalToken())return;updating=true;try{const data=await apiGet(APP_CONFIG.endpoints.health,{}, {silent:true});if(data.ok)window.PcpReportHeader.update(data.ultima_carga);}catch(_){}finally{updating=false;}}
   updateHeader();setInterval(()=>{if(!document.hidden)updateHeader();},60000);
  }
 
+ if(index===6){window.PcpEstoquePA.mount(selected);return;}
  if(index===5){window.PcpEficiencia.mount();return;}
  if(index===1||index===2||index===3||index===4){window.PcpComparativo.mount(selected,index);return;}
  const filter=document.querySelector('.filter-card');filter.className='pcp-report-filters card';

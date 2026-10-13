@@ -109,3 +109,16 @@
 .ef-table{font-size:11px;line-height:1.25}
 .ef-table th,.ef-table td{padding:4px 8px}
 .ef-summary{min-width:0;width:max-content}
+.pa-filter-grid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px}
+.pa-filter-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#766b64}
+.pa-filter-grid input,.pa-filter-grid select{width:100%;height:36px;border:1px solid #ded8d0;border-radius:6px;background:#f7f5f1;padding:0 10px;font:inherit;color:#342725}
+.pa-panel{min-width:0}.pa-panel>header{margin-bottom:10px}.pa-position{font-size:11px;color:var(--muted-foreground,#756d68);margin:4px 0 0}
+.pa-table-scroll{overflow:auto;max-height:330px;position:relative}
+.pa-table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:12px;line-height:1.25;color:var(--foreground,#181818)}
+.pa-table th,.pa-table td{padding:5px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border,#e6e0da)}
+.pa-table th:first-child{min-width:440px;text-align:left;font-weight:400;position:sticky;left:0;background:var(--card,#fff);z-index:1}
+.pa-table thead{position:sticky;top:0;z-index:3;background:var(--card,#fff)}
+.pa-table thead th{border-bottom:2px solid #8b2631;background:var(--card,#fff);font-weight:600}
+.pa-table thead button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:3px 0}
+.pa-table tbody tr:nth-child(even) td,.pa-table tbody tr:nth-child(even) th{background:var(--muted,#f7f5f1)}
+@media(max-width:600px){.pa-filter-grid{grid-template-columns:1fr 1fr}.pa-filter-grid label:last-child{grid-column:1/-1}.pa-table{font-size:11px}.pa-table th:first-child{min-width:220px;max-width:220px;white-space:normal}.pa-table-scroll{max-height:350px}}

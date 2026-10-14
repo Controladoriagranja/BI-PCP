@@ -240,3 +240,21 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 }
 
 .pcp-report .cg-table tbody tr>th:first-child,.pcp-report .cg-table thead tr:first-child>th:first-child{width:var(--cg-fixed-indicator);min-width:var(--cg-fixed-indicator);max-width:var(--cg-fixed-indicator)}
+
+/* Tema opcional: superfícies e números usam cores compatíveis. */
+.pcp-report .pcp-theme-button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--foreground);font-size:20px}
+:root[data-theme="dark"] .pcp-report{background:var(--background);color:var(--foreground)}
+:root[data-theme="dark"] .pcp-report .card{background:var(--card);border-color:var(--border)}
+:root[data-theme="dark"] .pcp-report .pcp-report-panel h2{color:#f3a3b1}
+:root[data-theme="dark"] .pcp-report .pcp-report-legend,:root[data-theme="dark"] .pcp-report .cg-filter-grid label,:root[data-theme="dark"] .pcp-report .pa-filter-grid label,:root[data-theme="dark"] .pcp-report .filter-card p{color:var(--muted-foreground)}
+:root[data-theme="dark"] .pcp-report .cg-table thead,:root[data-theme="dark"] .pcp-report .cg-table thead th,:root[data-theme="dark"] .pcp-report .cg-table thead tr:first-child>th:first-child,:root[data-theme="dark"] .pcp-report .cg-table thead tr:first-child>th:nth-child(2){background:var(--card);color:var(--foreground)}
+:root[data-theme="dark"] .pcp-report .cg-table td.cg-good{color:#4fe48f}
+:root[data-theme="dark"] .pcp-report .cg-table td.cg-bad{color:#ff777f}
+:root[data-theme="dark"] .pcp-report .cg-filter-grid select,:root[data-theme="dark"] .pcp-report .pa-filter-grid input,:root[data-theme="dark"] .pcp-report .pa-filter-grid select,:root[data-theme="dark"] .pcp-report .pcp-comparativo-filter-grid input,:root[data-theme="dark"] .pcp-report .pcp-comparativo-filter-grid select{background:var(--background);color:var(--foreground);border-color:var(--input)}
+:root[data-theme="dark"] .pcp-report .pcp-comparativo-filter-head .button:not(:first-child){background:var(--secondary);color:var(--foreground);border-color:var(--border)}
+:root[data-theme="dark"] .pcp-report .gp-warning{background:#382c16;color:#ffe3a9;border-color:#715823}
+/* As áreas dos gráficos mantêm uma superfície clara para preservar rótulos pretos. */
+.pcp-report .pcp-comparativo-chart,.pcp-report .gp-chart,.pcp-report .cg-line-chart{background:#fff;border-radius:8px}
+.pcp-report .cg-dialog{color-scheme:light;--background:#f7f5f1;--foreground:#211b1d;--card:#fff;--popover:#fff;--popover-foreground:#211b1d;--muted:#f1ede8;--border:#e6dfda;--input:#e6dfda;--primary:#7a1726}
+
+.pcp-report .page-header .pcp-theme-button{position:static;min-width:38px;align-self:center}

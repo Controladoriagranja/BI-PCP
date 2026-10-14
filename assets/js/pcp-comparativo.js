@@ -39,7 +39,7 @@ window.PcpComparativo=(()=>{
   });
   const fields={inicio:document.getElementById('comparativoInicio'),fim:document.getElementById('comparativoFim'),semana:document.getElementById('comparativoSemana'),unidade:document.getElementById('comparativoUnidade')};
   let followLatest=true,followLatestMonth=true,generation=0,controller=null,loading=false,lastConfirmed=null;
-  const css=getComputedStyle(document.documentElement),textColor=css.getPropertyValue('--muted-foreground').trim()||'#756d68';
+  const textColor='#756d68';
   function render(data){
    fields.inicio.value=data.periodo.inicio||'';fields.fim.value=data.periodo.fim||'';
    const selected=fields.semana.value;

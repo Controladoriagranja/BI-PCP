@@ -30,7 +30,8 @@
  const pager=document.createElement('nav');pager.className='pcp-report-pagination';pager.setAttribute('aria-label','Páginas do relatório');
  function pageLink(number,label){const params=new URLSearchParams(query);params.set('pagina',number);return '<a class="button" href="index.html?'+escape(params)+'" aria-label="'+label+'">'+(number<selected?'←':'→')+'</a>';}
  pager.innerHTML=(selected>1?pageLink(selected-1,'Página anterior'):'')+'<span>Página '+selected+' de '+group.paginas.length+'</span>'+(selected<group.paginas.length?pageLink(selected+1,'Próxima página'):'');
- const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);if(index!==4&&index!==5&&index!==6&&index!==7&&index!==8)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
+ const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);
+ const themeButton=document.createElement('button');themeButton.type='button';themeButton.className='icon-button pcp-theme-button';themeButton.setAttribute('data-theme-toggle','');themeButton.innerHTML='<span data-theme-icon aria-hidden="true"></span>';document.querySelector('.header-toolbar').append(themeButton);ThemeManager.refresh();if(index!==4&&index!==5&&index!==6&&index!==7&&index!==8)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
  window.PcpReportHeader={update(value){
   const field=document.getElementById('pcpUltimaAtualizacao');if(!field)return;
   const date=value?new Date(value):null;

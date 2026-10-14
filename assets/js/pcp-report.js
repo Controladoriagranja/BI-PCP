@@ -1,5 +1,10 @@
 "use strict";
 (() => {
+ window.PcpPeriodFlags={create(id,value,onChange){
+  const group=document.createElement('fieldset');group.className='pcp-period-flags';group.setAttribute('aria-label','Exibir indicador por dia ou por semana');
+  group.innerHTML='<legend>Exibir por</legend>'+[['dia','Dia'],['semana','Semana']].map(([key,label])=>'<label><input type="radio" name="'+id+'" value="'+key+'" '+(key===value?'checked':'')+'><span>'+label+'</span></label>').join('');
+  group.addEventListener('change',event=>{if(event.target.matches('input:checked'))onChange(event.target.value);});return group;
+ }};
  const query=new URLSearchParams(location.search), match=/^g([1-8])$/.exec(query.get('relatorio')||'');
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  if(!match){

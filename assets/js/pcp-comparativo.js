@@ -6,8 +6,9 @@ window.PcpComparativo=(()=>{
   const filter=document.querySelector('.filter-card'),content=document.getElementById('pcpConteudo'),status=document.getElementById('estadoConsulta'),error=document.getElementById('mensagemErro');
   filter.className='card pcp-comparativo-filtros';content.className='pcp-report-panels';status.textContent='';
   filter.innerHTML='<div class="pcp-comparativo-filter-head"><h2>Filtros</h2><div><button type="button" class="button" id="comparativoAtualizar">Atualizar</button><button type="button" class="button" id="comparativoLimpar">Limpar filtros</button></div></div><div class="pcp-comparativo-filter-grid"><label>Data inicial<input type="date" id="comparativoInicio"></label><label>Data final<input type="date" id="comparativoFim"></label><label>Semana<select id="comparativoSemana"><option value="">Todas</option></select></label><label>Unidade<select id="comparativoUnidade"><option value="">Ave Nova e Real Alimentos</option><option value="10">Ave Nova</option><option value="111">Real Alimentos</option></select></label></div>';
-  if(general){filter.querySelector('#comparativoSemana').parentElement.firstChild.textContent='Mês do gráfico diário';filter.querySelector('#comparativoUnidade').insertAdjacentHTML('beforeend','<option value="geral">Geral (consolidado)</option>');}
+  if(general){filter.querySelector('#comparativoSemana').parentElement.firstChild.textContent='Mês dos gráficos';filter.querySelector('#comparativoUnidade').insertAdjacentHTML('beforeend','<option value="geral">Geral (consolidado)</option>');}
   const descriptions=PCP_REPORT_MODEL.grupos[groupNumber].paginas[pageNumber-1].visuais.filter(v=>v.tipo==='lineChart');
+  const modes=descriptions.map((_,i)=>general&&i===1?'dia':'semana');let lastData=null;
   const charts=descriptions.map((visual,i)=>{
    const title=opportunities&&pageNumber===1&&i===0?'Rendimento Coração x Peso Vivo (%) - Semana':visual.titulo;
    const panel=document.createElement('article');panel.className='card pcp-report-panel pcp-comparativo-panel'+((groupNumber===1&&pageNumber===3)||(mix&&pageNumber===4)?' pcp-comparativo-agrupado':'');
@@ -35,20 +36,20 @@ window.PcpComparativo=(()=>{
     const reference=document.createElement('p');reference.textContent='As expressões do Power BI abaixo são a referência histórica. As bases e os ajustes vigentes estão descritos acima.';info.insertBefore(reference,info.querySelector('details'));
    }
    if(general)panel.querySelector('.pcp-measure-details>div>p:nth-of-type(2)').textContent='Rendimento = base de produção ÷ (peso vivo − mortos no transporte). O consolidado usa a soma dos pesos das unidades. Somente dias com abate até D−1.';
-   content.append(panel);return echarts.init(panel.querySelector('.pcp-comparativo-chart'));
+   panel.dataset.periodTitle=title.replace(/\s*[-·]\s*(Semana|Mês|Dia|Mensal|Diário)$/i,'');panel.querySelector('header').append(PcpPeriodFlags.create('periodoComparativo'+i,modes[i],mode=>{modes[i]=mode;if(lastData)render(lastData);}));content.append(panel);return echarts.init(panel.querySelector('.pcp-comparativo-chart'));
   });
   const fields={inicio:document.getElementById('comparativoInicio'),fim:document.getElementById('comparativoFim'),semana:document.getElementById('comparativoSemana'),unidade:document.getElementById('comparativoUnidade')};
   let followLatest=true,followLatestMonth=true,generation=0,controller=null,loading=false,lastConfirmed=null;
   const textColor='#756d68';
-  function render(data){
+  function render(data){lastData=data;
    fields.inicio.value=data.periodo.inicio||'';fields.fim.value=data.periodo.fim||'';
    const selected=fields.semana.value;
    if(general){fields.semana.innerHTML=data.meses_disponiveis.map(m=>'<option value="'+m.chave+'">'+esc(m.nome)+'</option>').join('');fields.semana.value=data.mes_diario||'';}
    else{fields.semana.innerHTML='<option value="">Todas</option>'+data.semanas.map(w=>'<option value="'+w.chave+'">'+w.ano+' · Semana '+w.semana+'</option>').join('');fields.semana.value=selected;}
    if(data.periodo_disponivel.inicio){for(const f of [fields.inicio,fields.fim]){f.min=data.periodo_disponivel.inicio;f.max=data.periodo_disponivel.fim;}}
    charts.forEach((chart,index)=>{
-    const rows=general?(index===0?data.meses:data.dias):data.serie;
-    const years=new Set(rows.map(r=>r.ano)),labels=rows.map(r=>general?(index===0?r.chave.slice(5)+'/'+r.chave.slice(0,4):r.chave.split('-').reverse().join('/')):years.size>1?r.ano+' / '+r.semana:String(r.semana));
+    const daily=modes[index]==='dia',rows=general?(daily?data.dias:(data.semanal||[])):(daily?(data.serie_diaria||[]):data.serie);const panel=chart.getDom().closest('article');panel.querySelector('h2').textContent=panel.dataset.periodTitle+' · '+(daily?'Dia':'Semana');
+    const years=new Set(rows.map(r=>r.ano)),labels=rows.map(r=>daily?r.chave.slice(8)+'/'+r.chave.slice(5,7):general?'Sem. '+Number(r.chave.slice(5)):years.size>1?r.ano+' / '+r.semana:String(r.semana));
     const metric=general?'rendimento':mix?[['mix_cortes_asa','mix_file'],['mix_cortes_coxa','mix_pele_file'],['mix_sambiquira','mix_pes'],['mix_inteiro']][pageNumber-1][index]:opportunities?[['rendimento_coracao','rendimento_figado'],['rendimento_moela','condenacao'],['subproduto','mortos_transporte']][pageNumber-1][index]:pageNumber===1?(index===0?'rendimento':'rendimento_sem_cms_dorso_pele'):pageNumber===2?(index===0?'rendimento_peito':'rendimento_coxa_sobrecoxa'):'rendimento_agrupado';
     const precision=(opportunities&&['rendimento_coracao','mortos_transporte'].includes(metric))||(mix&&['mix_sambiquira','mix_pes','mix_cortes_coxa'].includes(metric))?2:1,format=n=>percent(n,precision);
     const definitions=descriptions[index].projecoes.filter(p=>p.tipo==='Measure'&&p.papel==='Y').map(p=>{
@@ -70,7 +71,7 @@ window.PcpComparativo=(()=>{
      }
      const height=p.labelRect.height,top=Math.max(rect.y+2,Math.min(rect.y+rect.height-height-4,above?point[1]-height-10:point[1]+10));
      return {dy:top-p.labelRect.y,hideOverlap:false};
-    },label:{show:!s.surgical&&labels.length<=24,position:s.position,distance:9,fontSize:10,color:'#000000',backgroundColor:s.bg,borderRadius:3,padding:[3,5],formatter:p=>format(p.value)},data:rows.map(row=>row.valores.find(v=>s.global?v.dias_com_abate>0:v.unidade===s.uid)?.[s.metric]??null)}));
+    },label:{show:!s.surgical,position:s.position,distance:9,fontSize:10,color:'#000000',backgroundColor:s.bg,borderRadius:3,padding:[3,5],formatter:p=>format(p.value)},data:rows.map(row=>row.valores.find(v=>s.global?v.dias_com_abate>0:v.unidade===s.uid)?.[s.metric]??null)}));
     const numbers=series.flatMap(s=>s.data).filter(v=>v!=null&&Number.isFinite(v));
     let min=numbers.length?Math.floor((Math.min(...numbers)-.02)*20)/20:0,max=numbers.length?Math.ceil((Math.max(...numbers)+.02)*20)/20:1;
     if((opportunities||mix||general)&&numbers.length){
@@ -78,7 +79,7 @@ window.PcpComparativo=(()=>{
      min=Math.floor((low-padding)/step)*step;max=Math.ceil((high+padding)/step)*step;if(low>=0)min=Math.max(0,min);
     }
     const axisPrecision=(mix||general)?Math.max(metric==='mix_sambiquira'?2:1,Math.min(4,-Math.floor(Math.log10((max-min)*100/4)))):metric==='rendimento_coracao'?2:Math.max(...numbers.map(n=>Math.abs(n)))<.03?1:0;
-    const element=chart.getDom();element.style.width=Math.max(element.parentElement.clientWidth,labels.length*32+78)+'px';chart.resize();
+    const element=chart.getDom();element.style.width=Math.max(element.parentElement.clientWidth,labels.length*76+100)+'px';chart.resize();
     chart.setOption({animation:true,animationDuration:0,animationDurationUpdate:400,animationEasingUpdate:'cubicOut',color:['#ff1515','#168cff'],legend:{top:6,left:0,type:'scroll',icon:'circle',itemWidth:9,itemHeight:9,textStyle:{fontSize:10,color:textColor}},tooltip:{trigger:'axis',valueFormatter:format},grid:{left:48,right:30,top:58,bottom:48,containLabel:false},xAxis:{type:'category',data:labels,axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,margin:14,color:textColor,fontSize:11}},yAxis:{type:'value',min,max,splitNumber:4,axisLabel:{formatter:v=>(opportunities||mix||general)?percent(v,axisPrecision):Math.round(v*100)+'%',color:textColor,fontSize:11},splitLine:{lineStyle:{type:'dotted',color:'#ddd8d3'}}},series,graphic:!numbers.length?[{type:'text',left:'center',top:'middle',style:{text:'Nenhum registro disponível para os filtros selecionados.',fill:textColor,fontSize:13}}]:[]},{notMerge:false,replaceMerge:['series','graphic']});
    });
   }
@@ -88,14 +89,14 @@ window.PcpComparativo=(()=>{
    try{
     const data=await apiGet(endpoint,params,{signal:controller.signal,silent:true});if(id!==generation)return;
     if(data.ok!==true||(!general&&data.pagina!==pageNumber)||data.contrato!==contract||!Array.isArray(data.serie))throw Error('Resposta incompatível com as medidas do comparativo.');
-    render(data);window.PcpReportHeader?.update(data.ultima_atualizacao);const updated=data.ultima_atualizacao?new Date(data.ultima_atualizacao).toLocaleString('pt-BR'):'não informada';lastConfirmed='Dados reais · '+data.serie.length+(general?' mês(es)':' semana(s)')+' · período exibido: '+data.periodo.inicio+' a '+data.periodo.fim+' · '+(fields.unidade.selectedOptions[0]?.textContent||'Ambas as unidades')+' · '+(fields.semana.value?fields.semana.selectedOptions[0].textContent:'Todas as semanas')+' · somente dias com abate · até D−1';status.textContent=lastConfirmed;
+    render(data);window.PcpReportHeader?.update(data.ultima_atualizacao);const updated=data.ultima_atualizacao?new Date(data.ultima_atualizacao).toLocaleString('pt-BR'):'não informada';lastConfirmed='Dados reais · '+(general?(data.semanal||[]).length+' semana(s) no mês '+data.mes_diario:data.serie.length+' semana(s)')+' · período exibido: '+data.periodo.inicio+' a '+data.periodo.fim+' · '+(fields.unidade.selectedOptions[0]?.textContent||'Ambas as unidades')+' · '+(fields.semana.value?fields.semana.selectedOptions[0].textContent:'Todas as semanas')+' · somente dias com abate · até D−1';status.textContent=lastConfirmed;
    }catch(e){if(id!==generation||e.name==='AbortError')return;const denied=e.status===401||e.status===403;if(denied){for(const chart of charts)chart.clear();lastConfirmed=null;}error.textContent=e.message+(lastConfirmed?' Os gráficos mantêm a última consulta confirmada; os novos filtros ainda não foram aplicados.':'');error.classList.remove('hidden');status.textContent=lastConfirmed||'Consulta não concluída.';}
    finally{if(id===generation)loading=false;}
   }
   fields.inicio.onchange=fields.fim.onchange=()=>{followLatest=false;if(general)followLatestMonth=true;fields.semana.value='';load();};fields.unidade.onchange=load;fields.semana.onchange=()=>{if(general)followLatestMonth=false;load();};
   document.getElementById('comparativoAtualizar').onclick=load;
   document.getElementById('comparativoLimpar').onclick=()=>{followLatest=true;followLatestMonth=true;fields.semana.value='';fields.unidade.value='';load();};
-  window.addEventListener('resize',()=>charts.forEach(c=>{const count=c.getOption()?.xAxis?.[0]?.data?.length||0;c.getDom().style.width=Math.max(c.getDom().parentElement.clientWidth,count*32+78)+'px';c.resize();}));
+  window.addEventListener('resize',()=>charts.forEach(c=>{const count=c.getOption()?.xAxis?.[0]?.data?.length||0;c.getDom().style.width=Math.max(c.getDom().parentElement.clientWidth,count*76+100)+'px';c.resize();}));
   setInterval(()=>{if(!document.hidden&&!loading)load();},60000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!loading)load();});
   load();

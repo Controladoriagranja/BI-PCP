@@ -8,7 +8,7 @@ window.PcpComparativo=(()=>{
   filter.innerHTML='<div class="pcp-comparativo-filter-head"><h2>Filtros</h2><div><button type="button" class="button" id="comparativoAtualizar">Atualizar</button><button type="button" class="button" id="comparativoLimpar">Limpar filtros</button></div></div><div class="pcp-comparativo-filter-grid"><label>Data inicial<input type="date" id="comparativoInicio"></label><label>Data final<input type="date" id="comparativoFim"></label><label>Semana<select id="comparativoSemana"><option value="">Todas</option></select></label><label>Unidade<select id="comparativoUnidade"><option value="">Ave Nova e Real Alimentos</option><option value="10">Ave Nova</option><option value="111">Real Alimentos</option></select></label></div>';
   if(general){filter.querySelector('#comparativoSemana').parentElement.firstChild.textContent='Mês dos gráficos';filter.querySelector('#comparativoUnidade').insertAdjacentHTML('beforeend','<option value="geral">Geral (consolidado)</option>');}
   const descriptions=PCP_REPORT_MODEL.grupos[groupNumber].paginas[pageNumber-1].visuais.filter(v=>v.tipo==='lineChart');
-  const modes=descriptions.map((_,i)=>general&&i===1?'dia':'semana');let lastData=null;
+  const modes=descriptions.map((_,i)=>general&&i===1?'dia':'semana');let lastData=null;const renderedPeriods=[];
   const charts=descriptions.map((visual,i)=>{
    const title=opportunities&&pageNumber===1&&i===0?'Rendimento Coração x Peso Vivo (%) - Semana':visual.titulo;
    const panel=document.createElement('article');panel.className='card pcp-report-panel pcp-comparativo-panel'+((groupNumber===1&&pageNumber===3)||(mix&&pageNumber===4)?' pcp-comparativo-agrupado':'');
@@ -79,8 +79,11 @@ window.PcpComparativo=(()=>{
      min=Math.floor((low-padding)/step)*step;max=Math.ceil((high+padding)/step)*step;if(low>=0)min=Math.max(0,min);
     }
     const axisPrecision=(mix||general)?Math.max(metric==='mix_sambiquira'?2:1,Math.min(4,-Math.floor(Math.log10((max-min)*100/4)))):metric==='rendimento_coracao'?2:Math.max(...numbers.map(n=>Math.abs(n)))<.03?1:0;
-    const element=chart.getDom();element.style.width=Math.max(element.parentElement.clientWidth,labels.length*76+100)+'px';chart.resize();
-    chart.setOption({animation:true,animationDuration:0,animationDurationUpdate:400,animationEasingUpdate:'cubicOut',color:['#ff1515','#168cff'],legend:{top:6,left:0,type:'scroll',icon:'circle',itemWidth:9,itemHeight:9,textStyle:{fontSize:10,color:textColor}},tooltip:{trigger:'axis',valueFormatter:format},grid:{left:48,right:30,top:58,bottom:48,containLabel:false},xAxis:{type:'category',data:labels,axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,margin:14,color:textColor,fontSize:11}},yAxis:{type:'value',min,max,splitNumber:4,axisLabel:{formatter:v=>(opportunities||mix||general)?percent(v,axisPrecision):Math.round(v*100)+'%',color:textColor,fontSize:11},splitLine:{lineStyle:{type:'dotted',color:'#ddd8d3'}}},series,graphic:!numbers.length?[{type:'text',left:'center',top:'middle',style:{text:'Nenhum registro disponível para os filtros selecionados.',fill:textColor,fontSize:13}}]:[]},{notMerge:false,replaceMerge:['series','graphic']});
+    const element=chart.getDom(),viewport=element.parentElement,period=modes[index]+'|'+labels.join('|'),periodChanged=renderedPeriods[index]!==period;renderedPeriods[index]=period;
+    if(periodChanged)viewport.scrollLeft=0;
+    const chartWidth=Math.max(viewport.clientWidth,labels.length*76+100);element.style.width=chartWidth+'px';chart.resize({width:chartWidth,height:element.clientHeight});
+    chart.setOption({animation:!periodChanged,animationDuration:0,animationDurationUpdate:periodChanged?0:400,animationEasingUpdate:'cubicOut',color:['#ff1515','#168cff'],legend:{top:6,left:0,type:'scroll',icon:'circle',itemWidth:9,itemHeight:9,textStyle:{fontSize:10,color:textColor}},tooltip:{trigger:'axis',valueFormatter:format},grid:{left:48,right:30,top:58,bottom:48,containLabel:false},xAxis:{type:'category',data:labels,axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,margin:14,color:textColor,fontSize:11}},yAxis:{type:'value',min,max,splitNumber:4,axisLabel:{formatter:v=>(opportunities||mix||general)?percent(v,axisPrecision):Math.round(v*100)+'%',color:textColor,fontSize:11},splitLine:{lineStyle:{type:'dotted',color:'#ddd8d3'}}},series,graphic:!numbers.length?[{type:'text',left:'center',top:'middle',style:{text:'Nenhum registro disponível para os filtros selecionados.',fill:textColor,fontSize:13}}]:[]},{notMerge:true});
+    if(periodChanged){viewport.scrollLeft=0;requestAnimationFrame(()=>{if(renderedPeriods[index]===period){chart.resize({width:chartWidth,height:element.clientHeight});viewport.scrollLeft=0;}});}
    });
   }
   async function load(){
@@ -96,7 +99,7 @@ window.PcpComparativo=(()=>{
   fields.inicio.onchange=fields.fim.onchange=()=>{followLatest=false;if(general)followLatestMonth=true;fields.semana.value='';load();};fields.unidade.onchange=load;fields.semana.onchange=()=>{if(general)followLatestMonth=false;load();};
   document.getElementById('comparativoAtualizar').onclick=load;
   document.getElementById('comparativoLimpar').onclick=()=>{followLatest=true;followLatestMonth=true;fields.semana.value='';fields.unidade.value='';load();};
-  window.addEventListener('resize',()=>charts.forEach(c=>{const count=c.getOption()?.xAxis?.[0]?.data?.length||0;c.getDom().style.width=Math.max(c.getDom().parentElement.clientWidth,count*76+100)+'px';c.resize();}));
+  window.addEventListener('resize',()=>charts.forEach(c=>{const count=c.getOption()?.xAxis?.[0]?.data?.length||0,el=c.getDom(),width=Math.max(el.parentElement.clientWidth,count*76+100);el.style.width=width+'px';c.resize({width,height:el.clientHeight});}));
   setInterval(()=>{if(!document.hidden&&!loading)load();},60000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!loading)load();});
   load();

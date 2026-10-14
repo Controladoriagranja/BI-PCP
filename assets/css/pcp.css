@@ -190,3 +190,19 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pcp-report .cg-dialog-close{background:#fff;color:#342725;border:1px solid #ded8d0;flex:none}
 .pcp-report .cg-line-chart{height:clamp(240px,58dvh,560px);min-height:0;width:100%}
 @media(max-width:600px){.pcp-report .cg-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.pcp-report .cg-dialog-header{padding:12px;gap:8px}.pcp-report .cg-dialog-header h2{font-size:15px}.pcp-report .cg-dialog-header p{font-size:11px}}
+
+/* Seletores locais da evolução diária e semanal do comparativo cirúrgico. */
+.pcp-report .cg-chart-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;padding:12px 18px 4px;flex:none}
+.pcp-report .cg-chart-filters>label,.pcp-report .cg-chart-filters>div{display:flex;flex-direction:column;gap:5px;font-size:11px;width:240px;max-width:100%;min-width:0}
+.pcp-report .cg-chart-filters>label{width:130px}
+.pcp-report .cg-chart-filters>.hidden{display:none}
+.pcp-report .cg-chart-filters select,.pcp-report .cg-chart-filters .checkbox-multiselect-trigger{height:36px;min-height:36px}
+.pcp-report .cg-chart-filters .button{min-height:36px;height:36px;background:white;border:1px solid #ded8d0;color:#342725}
+.pcp-report .cg-chart-filters .checkbox-option{flex-direction:row;align-items:center;gap:8px;min-height:34px}
+.pcp-report .cg-chart-filters .checkbox-option[hidden]{display:none}
+.pcp-report .cg-chart-filters .checkbox-option input{width:14px;height:14px;padding:0;flex:none}
+.pcp-report .cg-chart-filters .checkbox-multiselect-panel{left:0;right:auto;width:min(300px,calc(100vw - 48px));min-width:0;max-height:260px;z-index:90}
+.pcp-report .cg-line-chart{flex:0 1 auto}
+@media(max-width:600px){.pcp-report .cg-chart-filters{padding:10px 12px 0;gap:8px}.pcp-report .cg-chart-filters>div{width:calc(100% - 138px)}.pcp-report .cg-chart-filters .checkbox-multiselect-panel{left:auto;right:0}.pcp-report .cg-chart-filters>.button{margin-left:auto}}
+
+.pcp-report .cg-chart-filters select{width:100%;border:1px solid #ded8d0;border-radius:6px;background:#f7f5f1;color:#342725;padding:0 10px;font:inherit}

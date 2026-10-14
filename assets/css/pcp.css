@@ -206,3 +206,7 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 @media(max-width:600px){.pcp-report .cg-chart-filters{padding:10px 12px 0;gap:8px}.pcp-report .cg-chart-filters>div{width:calc(100% - 138px)}.pcp-report .cg-chart-filters .checkbox-multiselect-panel{left:auto;right:0}.pcp-report .cg-chart-filters>.button{margin-left:auto}}
 
 .pcp-report .cg-chart-filters select{width:100%;border:1px solid #ded8d0;border-radius:6px;background:#f7f5f1;color:#342725;padding:0 10px;font:inherit}
+
+.pcp-report .cg-dialog{overflow:hidden}
+.pcp-report .cg-dialog-header{flex:none}
+.pcp-report .cg-line-chart{min-width:0;overflow:hidden}

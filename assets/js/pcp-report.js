@@ -20,7 +20,7 @@
   return;
  }
  const index=Number(match[1]), group=PCP_REPORT_MODEL.grupos[index];
- const selected=index===4?1:index===7?2:Math.min(group.paginas.length,Math.max(1,parseInt(query.get('pagina'),10)||1)), page=group.paginas[selected-1];
+ const selected=(index===4||index===6)?1:index===7?2:Math.min(group.paginas.length,Math.max(1,parseInt(query.get('pagina'),10)||1)), page=group.paginas[selected-1];
  document.body.dataset.page='report-g'+index;
  document.body.classList.add('pcp-model-page');
  const titles={1:'Análise Comparativa entre Frigoríficos',2:'Oportunidades de Rendimento',3:'Oportunidades de Mix',4:'Rendimento Geral',5:'Eficiência Abate (%) AN e RA',6:'Oportunidades Mix / Estoque Produto Acabado',7:'Oportunidades Gestão / Estoque Produto Acabado',8:'Comparativo x Cirúrgico Geral'};
@@ -30,7 +30,7 @@
  const pager=document.createElement('nav');pager.className='pcp-report-pagination';pager.setAttribute('aria-label','Páginas do relatório');
  function pageLink(number,label){const params=new URLSearchParams(query);params.set('pagina',number);return '<a class="button" href="index.html?'+escape(params)+'" aria-label="'+label+'">'+(number<selected?'←':'→')+'</a>';}
  pager.innerHTML=(selected>1?pageLink(selected-1,'Página anterior'):'')+'<span>Página '+selected+' de '+group.paginas.length+'</span>'+(selected<group.paginas.length?pageLink(selected+1,'Próxima página'):'');
- const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);if(index!==4&&index!==5&&index!==7&&index!==8)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
+ const updateBox=document.createElement('div');updateBox.className='pcp-header-update';updateBox.innerHTML='<span>Última atualização</span><strong id="pcpUltimaAtualizacao">—</strong>';document.querySelector('.header-toolbar').append(updateBox);if(index!==4&&index!==5&&index!==6&&index!==7&&index!==8)document.querySelector('.header-toolbar').append(pager);else updateBox.style.borderRight='0';
  window.PcpReportHeader={update(value){
   const field=document.getElementById('pcpUltimaAtualizacao');if(!field)return;
   const date=value?new Date(value):null;
@@ -44,7 +44,7 @@
 
  if(index===8){window.PcpCirurgico.mount();return;}
  if(index===7){window.PcpGestaoPA.mount();return;}
- if(index===6){window.PcpEstoquePA.mount(selected);return;}
+ if(index===6){window.PcpEstoquePA.mount();return;}
  if(index===5){window.PcpEficiencia.mount();return;}
  if(index===1||index===2||index===3||index===4){window.PcpComparativo.mount(selected,index);return;}
  const filter=document.querySelector('.filter-card');filter.className='pcp-report-filters card';

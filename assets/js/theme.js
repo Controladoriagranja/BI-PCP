@@ -5,22 +5,11 @@
 (() => {
     const STORAGE_KEY = "bi-zootecnico-theme";
 
-    function temaInicial() {
-        let salvo = null;
-        try { salvo = localStorage.getItem(STORAGE_KEY); } catch (_) {}
-
-        if (salvo === "light" || salvo === "dark") {
-            return salvo;
-        }
-
-        return window.matchMedia(
-            "(prefers-color-scheme: dark)"
-        ).matches
-            ? "dark"
-            : "light";
-    }
+    // O painel utiliza somente o tema claro, independentemente do navegador.
+    function temaInicial() { return "light"; }
 
     function aplicarTema(tema) {
+        tema = "light";
         document.documentElement.dataset.theme = tema;
 
         document
@@ -45,16 +34,7 @@
             return document.documentElement.dataset.theme || temaInicial();
         },
 
-        toggle() {
-            const novo =
-                this.get() === "dark"
-                    ? "light"
-                    : "dark";
-
-            try { localStorage.setItem(STORAGE_KEY, novo); } catch (_) {}
-
-            aplicarTema(novo);
-        },
+        toggle() { aplicarTema("light"); },
 
         init() {
             aplicarTema(temaInicial());

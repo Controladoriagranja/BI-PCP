@@ -147,3 +147,24 @@
 @media(max-height:599px){.pcp-report[data-page="report-g7"] .app-shell{height:auto}.pcp-report[data-page="report-g7"] #pcpConteudo{flex:none;grid-template-rows:auto auto}.pcp-report[data-page="report-g7"] .gp-chart{height:210px}.pcp-report[data-page="report-g7"] .pcp-comparativo-chart-scroll{flex:none}}
 
 body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:30px;height:30px;padding:4px 10px;}
+
+/* Controles proporcionais e ações comuns em todos os indicadores. */
+.pcp-report .pcp-comparativo-filter-grid{grid-template-columns:minmax(150px,200px) minmax(150px,200px) minmax(200px,280px) minmax(190px,260px);gap:10px 14px}
+.pcp-report .pa-filter-grid{grid-template-columns:minmax(150px,200px) minmax(190px,260px) minmax(240px,440px);gap:10px 14px}
+.pcp-report .cg-filter-grid{display:grid;grid-template-columns:minmax(190px,240px) minmax(90px,110px) minmax(130px,180px) minmax(130px,150px) minmax(170px,230px);gap:10px 14px}
+.pcp-report .cg-filter-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#766b64}
+.pcp-report .cg-filter-grid select{width:100%;height:36px;border:1px solid #ded8d0;border-radius:6px;background:#f7f5f1;padding:0 10px;font:inherit;color:#342725}
+.pcp-report .pcp-comparativo-filter-head>div{display:flex;gap:8px;flex-wrap:wrap}
+.pcp-report .pcp-comparativo-filter-head .button{height:36px;min-height:36px;padding:0 13px;border:1px solid #ded8d0;border-radius:8px;background:#fff;color:#342725;font-size:12px;font-weight:600;white-space:nowrap}
+.pcp-report .pcp-comparativo-filter-head .button:first-child{background:#7a1726;border-color:#7a1726;color:#fff}
+.pcp-report .pcp-comparativo-filter-head .button:hover{filter:brightness(.95)}
+.pcp-report .checkbox-multiselect-trigger{height:36px;min-height:36px;font-size:11px}
+/* Mesma paleta neutra da tabela de Estoque Produto Acabado. */
+.pcp-report .cg-table{color:var(--foreground,#211b1d);font-weight:400}
+.pcp-report .cg-table tbody tr:nth-child(even),.pcp-report .cg-table tbody tr:nth-child(even)>th{background:var(--muted,#f7f5f1)}
+.pcp-report .cg-table tbody tr:nth-child(odd),.pcp-report .cg-table tbody tr:nth-child(odd)>th{background:var(--card,#fff)}
+.pcp-report .cg-table .cg-target{color:inherit}
+@media(max-width:1000px){.pcp-report .cg-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pcp-report .pcp-comparativo-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.pcp-report .cg-filter-grid,.pcp-report .pa-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pcp-report .cg-filter-grid label:last-child,.pcp-report .pa-filter-grid label:last-child{grid-column:1/-1}.pcp-report .pcp-comparativo-filter-head{gap:8px}.pcp-report .pcp-comparativo-filter-head .button{font-size:11px;height:32px;min-height:32px;padding:0 10px}}
+
+@media(max-width:600px){.pcp-report .cg-table tbody tr>th:first-child,.pcp-report .cg-table thead tr:first-child>th:first-child{min-width:150px;max-width:150px;width:150px;white-space:normal}.pcp-report .cg-table th,.pcp-report .cg-table td{padding:5px 7px}}

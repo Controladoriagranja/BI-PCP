@@ -16,7 +16,7 @@
  function error(e){$('mensagemErro').textContent=e.message;$('mensagemErro').classList.remove('hidden');$('estadoConsulta').textContent='Consulta não concluída. Nenhum valor anterior foi mantido.';}
  function card(label,value,note=''){return '<article class="card pcp-kpi"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(note)+'</small></article>';}
  if(page==='formulas'){
-  try{if(!APP_CONFIG.endpoints.medidas)throw Error('A API existente não fornece um endpoint de fórmulas. As expressões originais estão disponíveis em Mais detalhes nas páginas do relatório.');const result=await apiGet(APP_CONFIG.endpoints.medidas);if(!Array.isArray(result.medidas))throw Error('Contrato de fórmulas PCP indisponível.');
+  try{if(!APP_CONFIG.endpoints.medidas)throw Error('A API existente não fornece um endpoint de fórmulas. Consulte a documentação das medidas oficiais.');const result=await apiGet(APP_CONFIG.endpoints.medidas);if(!Array.isArray(result.medidas))throw Error('Contrato de fórmulas PCP indisponível.');
    $('ultimaAtualizacao').textContent='Modelo oficial PCP';
    function render(){const text=$('buscarFormula').value.toLocaleLowerCase('pt-BR');const rows=result.medidas.filter(m=>(m.nome+' '+m.tabela).toLocaleLowerCase('pt-BR').includes(text));$('estadoConsulta').textContent=rows.length+' expressões oficiais · a execução com a API deve ser validada por indicador';$('pcpConteudo').innerHTML=rows.map(m=>'<article class="card pcp-formula"><h3>'+esc(m.nome)+'</h3><p>'+esc(m.tabela)+'</p><details><summary>Ver expressão original</summary><pre>'+esc(Array.isArray(m.expressao)?m.expressao.join('\n'):m.expressao)+'</pre></details></article>').join('');}
    $('buscarFormula').oninput=render;render();

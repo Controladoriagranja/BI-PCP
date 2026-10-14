@@ -5,6 +5,12 @@
   group.innerHTML='<legend>Exibir por</legend>'+[['dia','Dia'],['semana','Semana']].map(([key,label])=>'<label><input type="radio" name="'+id+'" value="'+key+'" '+(key===value?'checked':'')+'><span>'+label+'</span></label>').join('');
   group.addEventListener('change',event=>{if(event.target.matches('input:checked'))onChange(event.target.value);});return group;
  }};
+ window.PcpWeekDrill={
+  key(day){const d=new Date(String(day).slice(0,10)+'T00:00:00Z'),year=d.getUTCFullYear(),first=new Date(Date.UTC(year,0,1)),week=Math.floor(((d-first)/86400000+(first.getUTCDay()+6)%7)/7)+1;return year+'-'+String(week).padStart(2,'0');},
+  flags(group,value){for(const radio of group.querySelectorAll('input'))radio.checked=radio.value===value;},
+  bar(onBack){const bar=document.createElement('div');bar.className='pcp-week-drill';const text=document.createElement('span'),button=document.createElement('button');button.type='button';button.textContent='← Voltar às semanas';button.onclick=onBack;bar.append(text,button);return {element:bar,update(weekly,key){bar.hidden=!weekly&&!key;text.textContent=key?key.slice(0,4)+' · Semana '+Number(key.slice(5))+' · dias disponíveis no período':'Clique na semana para ver os dias.';button.hidden=!key;}};},
+  bind(chart,isWeekly,getRows,onSelect){chart.on('click',event=>{if(!isWeekly())return;let index=event.componentType==='series'?event.dataIndex:event.componentType==='xAxis'?chart.getOption().xAxis[0].data.findIndex(label=>String(label)===String(event.value)):-1;const row=getRows()[index];if(row)onSelect(row);});}
+ };
  const query=new URLSearchParams(location.search), match=/^g([1-8])$/.exec(query.get('relatorio')||'');
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  if(!match){

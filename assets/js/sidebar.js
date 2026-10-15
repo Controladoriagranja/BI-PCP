@@ -9,7 +9,7 @@
     {
         "id": "desempenho",
         "label": "Visão Geral",
-        "href": "index.html"
+        "href": "index.html?visao=geral"
     },
     {
         "id": "report-g1",

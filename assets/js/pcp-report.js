@@ -40,7 +40,11 @@
   bar(onBack){const bar=document.createElement('div');bar.className='pcp-week-drill';return {element:bar,back:onBack,update(weekly,key){bar.hidden=!weekly&&!key;bar.textContent=key?key.slice(0,4)+' · Semana '+Number(key.slice(5))+' · clique na data para voltar às semanas':'Clique na semana para ver os dias.';}};},
   bind(chart,isWeekly,getRows,onSelect,onReturn){chart.on('click',event=>{if(!isWeekly()){if(event.componentType==='xAxis')onReturn?.();return;}let index=event.componentType==='series'?event.dataIndex:event.componentType==='xAxis'?chart.getOption().xAxis[0].data.findIndex(label=>String(label)===String(event.value)):-1;const row=getRows()[index];if(row)onSelect(row);});}
  };
- const query=new URLSearchParams(location.search), match=/^g([1-8])$/.exec(query.get('relatorio')||'');
+ const query=new URLSearchParams(location.search);
+ if(!query.has('relatorio')&&query.get('visao')!=='geral'){
+  query.set('relatorio','g8');history.replaceState(history.state,'',location.pathname+'?'+query.toString()+location.hash);
+ }
+ const match=/^g([1-8])$/.exec(query.get('relatorio')||'');
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  if(!match){
   document.title='Visão Geral em manutenção | BI PCP';

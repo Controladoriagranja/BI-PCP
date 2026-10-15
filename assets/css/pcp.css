@@ -392,3 +392,10 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 @media(max-width:767px){.pcp-report .pcp-mobile-table-shell>div{scrollbar-color:auto;scrollbar-width:auto}}
 
 @media(max-width:350px){.pcp-report .cg-table{--cg-fixed-indicator:78px;--cg-fixed-reference:40px}.pcp-report .cg-table thead tr:first-child>th:nth-child(2){font-size:8.5px}}
+
+/* Evita deslocamento do documento e zoom acidental ao tocar no celular. */
+@media(max-width:767px){
+ html:has(>body.pcp-report),body.pcp-report{max-width:100%;overflow-x:clip;overscroll-behavior:none;touch-action:manipulation}
+ .pcp-report .app-shell{min-width:0;max-width:100%;box-sizing:border-box}
+ .pcp-report .ef-table-scroll,.pcp-report .pa-table-scroll,.pcp-report .cg-scroll,.pcp-report .pcp-report-table-wrap{overscroll-behavior-x:contain}
+}

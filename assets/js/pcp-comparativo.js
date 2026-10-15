@@ -82,6 +82,16 @@ window.PcpComparativo=(()=>{
      const height=p.labelRect.height,top=Math.max(rect.y+2,Math.min(rect.y+rect.height-height-4,above?point[1]-height-10:point[1]+10));
      return {dy:top-p.labelRect.y,hideOverlap:false};
     },label:{show:!s.surgical,position:s.position,distance:9,fontSize:mobileOverview?11:10,color:'#000000',backgroundColor:s.bg,borderRadius:3,padding:[3,5],formatter:p=>format(p.value)},data:rows.map(row=>row.valores.find(v=>s.global?v.dias_com_abate>0:v.unidade===s.uid)?.[s.metric]??null)}));
+    if(mobileOverview){
+     const labelLayers=series.filter(s=>!s.id.endsWith('_cirurgico')&&s.id!=='meta_mortos').map(s=>({...s,id:s.id+'_rotulos',type:'scatter',symbolSize:0,silent:true,zlevel:3,lineStyle:undefined,tooltip:{show:false},label:{...s.label,show:true},labelLayout:p=>{
+      const rawIndex=chart.getModel().getSeriesByIndex(p.seriesIndex).getData().getRawIndex(p.dataIndex),row=rows[rawIndex],rect=chart.getModel().getComponent('grid')?.coordinateSystem?.getRect();if(!row||!rect)return {hideOverlap:false};
+      const ranked=definitions.filter(d=>!d.surgical&&(!fields.unidade.value||fields.unidade.value===d.uid)).map(d=>({uid:d.uid,value:row.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||b.uid.localeCompare(a.uid));
+      const rank=ranked.findIndex(d=>d.uid===s.id);if(rank<0)return {hideOverlap:false};const height=p.labelRect.height||22,top=rect.y+2,bottom=rect.y+rect.height-2;
+      const positions=ranked.map((d,i)=>{const y=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[rawIndex,d.value])[1];return Math.max(top,Math.min(bottom-height,i===0?y-height-9:i===ranked.length-1?y+9:y-height/2));});
+      for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+height+5);const overflow=Math.max(0,positions.at(-1)+height-bottom);for(let i=0;i<positions.length;i++)positions[i]-=overflow;
+      const point=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[rawIndex,ranked[rank].value]);return {x:Math.max(rect.x+p.labelRect.width/2+2,Math.min(rect.x+rect.width-p.labelRect.width/2-2,point[0])),y:positions[rank],align:'center',verticalAlign:'top',hideOverlap:false};
+     }}));series.forEach(s=>s.label.show=false);series.push(...labelLayers);
+    }
     const numbers=series.flatMap(s=>s.data).filter(v=>v!=null&&Number.isFinite(v));
     let min=numbers.length?Math.floor((Math.min(...numbers)-.02)*20)/20:0,max=numbers.length?Math.ceil((Math.max(...numbers)+.02)*20)/20:1;
     if((opportunities||mix||general||mobileOverview)&&numbers.length){
@@ -92,7 +102,7 @@ window.PcpComparativo=(()=>{
     const element=chart.getDom(),viewport=element.parentElement,period=modes[index]+'|'+labels.join('|'),periodChanged=renderedPeriods[index]!==period;renderedPeriods[index]=period;
     if(periodChanged)viewport.scrollLeft=0;
     const chartWidth=mobileOverview?viewport.clientWidth:Math.max(viewport.clientWidth,labels.length*76+100);element.style.width=chartWidth+'px';chart.resize({width:chartWidth,height:element.clientHeight});
-    const zoom=mobileOverview?PcpMobileScroll.config(chart,rows.length,periodChanged):[];
+    const zoom=mobileOverview?PcpMobileScroll.config(chart,rows.length,periodChanged,{filterMode:'filter'}):[];
     if(mobileOverview){const legend=panel.querySelector('.pcp-mobile-chart-legend');legend.innerHTML=definitions.filter(s=>!fields.unidade.value||s.uid===fields.unidade.value).map(s=>'<span><i style="background:'+s.color+'"></i>'+esc(s.surgical?'Cirúrgico · '+(s.uid==='111'?'RA':'AN'):s.uid==='111'?'Real Alimentos':s.uid==='geral'?'Geral':'Ave Nova')+'</span>').join('');}
     chart.setOption({animation:!periodChanged,animationDuration:0,animationDurationUpdate:periodChanged?0:400,animationEasingUpdate:'cubicOut',color:['#ff1515','#168cff'],legend:{show:!mobileOverview,top:6,left:0,type:'scroll',icon:'circle',itemWidth:9,itemHeight:9,textStyle:{fontSize:10,color:textColor}},tooltip:{show:!mobileOverview,triggerOn:mobileOverview?'none':'mousemove|click',trigger:'axis',axisPointer:{show:!mobileOverview},valueFormatter:format},grid:{left:48,right:mobileOverview?22:30,top:mobileOverview?26:58,bottom:mobileOverview?70:48,containLabel:false},dataZoom:zoom,xAxis:{type:'category',triggerEvent:true,data:labels,axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,margin:14,color:textColor,fontSize:11,cursor:daily&&!drilledWeeks[index]?'default':'pointer'}},yAxis:{type:'value',min,max,splitNumber:4,axisLabel:{formatter:v=>(opportunities||mix||general||mobileOverview)?percent(v,axisPrecision):Math.round(v*100)+'%',color:textColor,fontSize:11},splitLine:{lineStyle:{type:'dotted',color:'#ddd8d3'}}},series,graphic:!numbers.length?[{type:'text',left:'center',top:'middle',style:{text:'Nenhum registro disponível para os filtros selecionados.',fill:textColor,fontSize:13}}]:[]},{notMerge:true});
     if(periodChanged){viewport.scrollLeft=0;requestAnimationFrame(()=>{if(renderedPeriods[index]===period){chart.resize({width:chartWidth,height:element.clientHeight});viewport.scrollLeft=0;}});}

@@ -315,3 +315,23 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 }
 
 @media(max-width:767px){.pcp-mobile-overview .pcp-comparativo-chart canvas{touch-action:pan-y}}
+
+@media(max-width:767px){
+ .pcp-report .pcp-mobile-scroll-host{position:relative;min-width:0}
+ .pcp-report .pcp-mobile-scroll-range{position:absolute;bottom:0;height:44px;min-height:44px;margin:0;padding:0;border:0;appearance:none;-webkit-appearance:none;background:transparent;touch-action:none;cursor:ew-resize;z-index:4;box-sizing:border-box}
+ .pcp-report .pcp-mobile-scroll-range::-webkit-slider-runnable-track{height:14px;background:#ededed;border-radius:7px}
+ .pcp-report .pcp-mobile-scroll-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:var(--pcp-scroll-thumb,48px);height:18px;margin-top:-2px;border:0;border-radius:5px;background:#999}
+ .pcp-report .pcp-mobile-scroll-range::-moz-range-track{height:14px;background:#ededed;border-radius:7px}
+ .pcp-report .pcp-mobile-scroll-range::-moz-range-thumb{width:var(--pcp-scroll-thumb,48px);height:18px;border:0;border-radius:5px;background:#999}
+ .pcp-report .pcp-mobile-scroll-range:focus-visible{outline:2px solid #7a1726;outline-offset:0;border-radius:7px}
+ .pcp-report .pcp-mobile-scroll-range:disabled{opacity:.6}
+ .pcp-report .pcp-mobile-scroll-host canvas{touch-action:pan-y}
+ .pcp-report[data-page="report-g7"] .app-shell{height:auto;display:grid;grid-template-columns:minmax(0,1fr);padding:64px 12px 18px;gap:12px}
+ .pcp-report[data-page="report-g7"] #pcpConteudo{display:grid;grid-template-rows:auto;gap:12px}
+ .pcp-report[data-page="report-g7"] .gp-chart{height:300px;min-height:300px}
+ .pcp-report .ef-filter-field,.pcp-report .cg-filter-grid>label,.pcp-report .pa-filter-grid>label{min-width:0;max-width:100%}
+ .pcp-report .ef-filter-field input,.pcp-report .cg-filter-grid select,.pcp-report .pa-filter-grid input,.pcp-report .pa-filter-grid select{box-sizing:border-box;width:100%;max-width:100%;min-width:0;font-size:16px;height:40px}
+ .pcp-report .cg-scroll,.pcp-report .pcp-report-table-wrap{scrollbar-width:auto;scrollbar-color:#999 #ededed}
+}
+
+@media(max-width:767px){.pcp-report[data-page="report-g7"] .pcp-comparativo-chart-scroll{flex:none;height:300px;min-height:300px;overflow:hidden}.pcp-report[data-page="report-g7"] .gp-panel{align-self:start}}

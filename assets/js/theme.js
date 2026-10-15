@@ -6,6 +6,7 @@
     const STORAGE_KEY = "bi-zootecnico-theme";
 
     function temaInicial() {
+        if (window.matchMedia("(max-width:767px)").matches) return "light";
         let salvo = null;
         try { salvo = localStorage.getItem(STORAGE_KEY); } catch (_) {}
 
@@ -67,6 +68,9 @@
 
         init() {
             aplicarTema(temaInicial());
+            window.addEventListener("pageshow", () => {
+                if (window.matchMedia("(max-width:767px)").matches) aplicarTema("light");
+            });
 
             document.addEventListener(
                 "click",

@@ -280,7 +280,6 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 @media(max-width:600px){.pcp-period-flags label{min-width:54px;padding:6px 10px}}
 
 .pcp-week-drill{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;margin:6px 0;font-size:10px;line-height:1.4;color:var(--muted-foreground,#766d70);flex:none}
-.pcp-week-drill[hidden],.pcp-week-drill button[hidden]{display:none}
-.pcp-week-drill button{flex:none;min-height:28px;padding:4px 8px;border:1px solid var(--border,#ded8d0);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#342725);font:inherit;cursor:pointer}
+.pcp-week-drill[hidden]{display:none}
 .cg-dialog>.pcp-week-drill{padding:0 18px}
 @media(max-width:600px){.pcp-week-drill{flex-wrap:wrap}.cg-dialog>.pcp-week-drill{padding:0 12px}}

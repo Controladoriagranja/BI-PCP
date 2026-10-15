@@ -74,7 +74,7 @@
                         <span>${item.label}</span>
                     </a>
                 `).join("")}
-            </nav><nav class="pcp-support-nav" aria-label="Ferramentas PCP"><a href="index.html?ajuda=1">Ajuda</a></nav>
+            </nav><nav class="pcp-support-nav" aria-label="Ferramentas PCP"><a href="ajuda.html">Ajuda</a></nav>
         </aside>
     `;
 

@@ -283,3 +283,6 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pcp-week-drill[hidden]{display:none}
 .cg-dialog>.pcp-week-drill{padding:0 18px}
 @media(max-width:600px){.pcp-week-drill{flex-wrap:wrap}.cg-dialog>.pcp-week-drill{padding:0 12px}}
+
+/* Valores dos indicadores diários e mensais em seminegrito. */
+.pcp-report .cg-table tbody tr>td:nth-child(n+3){font-weight:600}

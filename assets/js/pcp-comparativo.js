@@ -76,8 +76,12 @@ window.PcpComparativo=(()=>{
      if(!rect||!point||!Number.isFinite(point[1]))return {hideOverlap:false};
      if(general){
       const ranked=definitions.filter(d=>PcpMulti.includes(fields.unidade.value,d.uid)).map(d=>({uid:d.uid,value:row?.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||a.uid.localeCompare(b.uid));
-      const rank=ranked.findIndex(d=>d.uid===s.uid);above=rank===0;
-      if(ranked.length===3&&rank===1){const x=Math.max(rect.x+2,Math.min(rect.x+rect.width-p.labelRect.width-2,point[0]+12));return {dx:x-p.labelRect.x,dy:point[1]-p.labelRect.height/2-p.labelRect.y,hideOverlap:false};}
+      const rank=ranked.findIndex(d=>d.uid===s.uid);if(rank<0)return {hideOverlap:false};
+      const height=Math.max(24,p.labelRect.height),gap=7,top=rect.y+4,bottom=rect.y+rect.height-4;
+      const positions=ranked.map((d,i)=>{const y=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[p.dataIndex,d.value])[1];return Math.max(top,Math.min(bottom-height,i===0?y-height-10:i===ranked.length-1?y+10:y-height/2));});
+      for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+height+gap);
+      const overflow=Math.max(0,positions.at(-1)+height-bottom);for(let i=0;i<positions.length;i++)positions[i]-=overflow;
+      return {x:Math.max(rect.x+p.labelRect.width/2+2,Math.min(rect.x+rect.width-p.labelRect.width/2-2,point[0])),y:positions[rank],align:'center',verticalAlign:'top',hideOverlap:false};
      }
      const height=p.labelRect.height,top=Math.max(rect.y+2,Math.min(rect.y+rect.height-height-4,above?point[1]-height-10:point[1]+10));
      return {dy:top-p.labelRect.y,hideOverlap:false};
@@ -86,9 +90,9 @@ window.PcpComparativo=(()=>{
      const labelLayers=series.filter(s=>!s.id.endsWith('_cirurgico')&&s.id!=='meta_mortos').map(s=>({...s,id:s.id+'_rotulos',type:'scatter',symbolSize:0,silent:true,zlevel:3,lineStyle:undefined,tooltip:{show:false},label:{...s.label,show:true},labelLayout:p=>{
       const rawIndex=chart.getModel().getSeriesByIndex(p.seriesIndex).getData().getRawIndex(p.dataIndex),row=rows[rawIndex],rect=chart.getModel().getComponent('grid')?.coordinateSystem?.getRect();if(!row||!rect)return {hideOverlap:false};
       const ranked=definitions.filter(d=>!d.surgical&&(PcpMulti.includes(fields.unidade.value,d.uid))).map(d=>({uid:d.uid,value:row.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||b.uid.localeCompare(a.uid));
-      const rank=ranked.findIndex(d=>d.uid===s.id);if(rank<0)return {hideOverlap:false};const height=p.labelRect.height||22,top=rect.y+2,bottom=rect.y+rect.height-2;
+      const rank=ranked.findIndex(d=>d.uid===s.id);if(rank<0)return {hideOverlap:false};const height=Math.max(24,p.labelRect.height||22),top=rect.y+2,bottom=rect.y+rect.height-2;
       const positions=ranked.map((d,i)=>{const y=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[rawIndex,d.value])[1];return Math.max(top,Math.min(bottom-height,i===0?y-height-9:i===ranked.length-1?y+9:y-height/2));});
-      for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+height+5);const overflow=Math.max(0,positions.at(-1)+height-bottom);for(let i=0;i<positions.length;i++)positions[i]-=overflow;
+      for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+height+7);const overflow=Math.max(0,positions.at(-1)+height-bottom);for(let i=0;i<positions.length;i++)positions[i]-=overflow;
       const point=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[rawIndex,ranked[rank].value]);return {x:Math.max(rect.x+p.labelRect.width/2+2,Math.min(rect.x+rect.width-p.labelRect.width/2-2,point[0])),y:positions[rank],align:'center',verticalAlign:'top',hideOverlap:false};
      }}));series.forEach(s=>s.label.show=false);series.push(...labelLayers);
     }

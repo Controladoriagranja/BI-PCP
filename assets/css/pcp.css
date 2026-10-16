@@ -457,3 +457,11 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 
 /* Rendimento Geral: ocupa a altura disponível da tela. */
 .pcp-report .pcp-rendimento-geral-panel .pcp-comparativo-chart{height:max(360px,calc(100dvh - 330px))}
+
+/* Separação dos dias também no computador. */
+@media(min-width:768px){
+ .pcp-report .cg-table .cg-day-group{border-left:2px solid #8b2631;border-top:2px solid #8b2631}
+ .pcp-report .cg-table .cg-day-start{border-left:2px solid #8b2631}
+ .pcp-report .cg-table td.cg-day-band-0,.pcp-report .cg-table th.cg-day-band-0{background:var(--card,#fff)}
+ .pcp-report .cg-table td.cg-day-band-1,.pcp-report .cg-table th.cg-day-band-1{background:var(--muted,#f2eeea)}
+}

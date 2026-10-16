@@ -454,3 +454,6 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
  .pcp-report .checkbox-multiselect .checkbox-multiselect-panel{width:100%;max-height:min(320px,50dvh)}
  .pcp-report .checkbox-multiselect .checkbox-multiselect-search{font-size:16px}
 }
+
+/* Rendimento Geral: ocupa a altura disponível da tela. */
+.pcp-report .pcp-rendimento-geral-panel .pcp-comparativo-chart{height:max(360px,calc(100dvh - 330px))}

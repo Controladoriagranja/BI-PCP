@@ -29,9 +29,9 @@
   }
  };
 
- window.PcpPeriodFlags={create(id,value,onChange){
-  const group=document.createElement('fieldset');group.className='pcp-period-flags';group.dataset.selection=value;group.setAttribute('aria-label','Exibir indicador por dia ou por semana');
-  group.innerHTML='<legend>Exibir por</legend>'+[['dia','Dia'],['semana','Semana']].map(([key,label])=>'<label><input type="radio" name="'+id+'" value="'+key+'" '+(key===value?'checked':'')+'><span>'+label+'</span></label>').join('');
+ window.PcpPeriodFlags={create(id,value,onChange,options=[['dia','Dia'],['semana','Semana']]){
+  const group=document.createElement('fieldset');group.className='pcp-period-flags';group.dataset.selection=value;group.setAttribute('aria-label','Exibir indicador por '+options.map(([,label])=>label.toLowerCase()).join(', '));
+  group.innerHTML='<legend>Exibir por</legend>'+options.map(([key,label])=>'<label><input type="radio" name="'+id+'" value="'+key+'" '+(key===value?'checked':'')+'><span>'+label+'</span></label>').join('');
   group.addEventListener('change',event=>{if(event.target.matches('input:checked')){group.dataset.selection=event.target.value;onChange(event.target.value);}});group.addEventListener('click',event=>{if(event.target.matches('input:checked')&&group.dataset.selection===event.target.value)onChange(event.target.value);});return group;
  }};
  window.PcpWeekDrill={

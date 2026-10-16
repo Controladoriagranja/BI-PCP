@@ -63,19 +63,19 @@ window.PcpComparativo=(()=>{
     const metric=general?'rendimento':mix?[['mix_cortes_asa','mix_file'],['mix_cortes_coxa','mix_pele_file'],['mix_sambiquira','mix_pes'],['mix_inteiro']][chartPage-1][chartIndex]:opportunities?[['rendimento_coracao','rendimento_figado'],['rendimento_moela','condenacao'],['subproduto','mortos_transporte']][chartPage-1][chartIndex]:chartPage===1?(chartIndex===0?'rendimento':'rendimento_sem_cms_dorso_pele'):chartPage===2?(chartIndex===0?'rendimento_peito':'rendimento_coxa_sobrecoxa'):'rendimento_agrupado';
     const precision=(opportunities&&['rendimento_coracao','mortos_transporte'].includes(metric))||(mix&&['mix_sambiquira','mix_pes','mix_cortes_coxa'].includes(metric))?2:1,format=n=>percent(n,precision);
     const definitions=descriptions[index].projecoes.filter(p=>p.tipo==='Measure'&&p.papel==='Y').map(p=>{
-     const global=p.campo.startsWith('Meta Mortos'),surgical=p.campo.includes('Cirúrgico')||global,uid=global?(fields.unidade.value||'10'):p.campo.includes('GERAL')?'geral':p.campo.includes(' - RA')?'111':'10';
+     const global=p.campo.startsWith('Meta Mortos'),surgical=p.campo.includes('Cirúrgico')||global,uid=global?(PcpMulti.values(fields.unidade.value)[0]||'10'):p.campo.includes('GERAL')?'geral':p.campo.includes(' - RA')?'111':'10';
      return {uid,global,id:global?'meta_mortos':uid+(surgical?'_cirurgico':''),name:p.campo,metric:surgical?(opportunities?(global?'meta_mortos':'cirurgico_'+metric.replace('rendimento_','')):chartIndex===0?'cirurgico_peito':'cirurgico_coxa_sobrecoxa'):metric,surgical,color:surgical?'#222222':uid==='geral'?'#817b78':uid==='111'?'#ff1515':'#168cff',bg:uid==='geral'?'#ece9e7':uid==='111'?'#fbe4e5':'#e4f2ff',position:uid==='111'?'top':'bottom'};
     });
-    const series=definitions.filter(s=>!fields.unidade.value||fields.unidade.value===s.uid).map(s=>({id:s.id,name:s.name,type:'line',symbol:s.surgical?'none':'circle',symbolSize:7,showAllSymbol:true,connectNulls:false,lineStyle:{width:s.surgical?1.2:2.5,color:s.color},itemStyle:{color:s.color},labelLayout:p=>{
+    const series=definitions.filter(s=>PcpMulti.includes(fields.unidade.value,s.uid)).map(s=>({id:s.id,name:s.name,type:'line',symbol:s.surgical?'none':'circle',symbolSize:7,showAllSymbol:true,connectNulls:false,lineStyle:{width:s.surgical?1.2:2.5,color:s.color},itemStyle:{color:s.color},labelLayout:p=>{
      const row=rows[p.dataIndex],value=row?.valores.find(v=>v.unidade===s.uid)?.[s.metric];
-     const other=definitions.find(d=>!d.surgical&&d.uid!==s.uid&&(!fields.unidade.value||fields.unidade.value===d.uid));
+     const other=definitions.find(d=>!d.surgical&&d.uid!==s.uid&&(PcpMulti.includes(fields.unidade.value,d.uid)));
      const otherValue=other?row?.valores.find(v=>v.unidade===other.uid)?.[other.metric]:null;
      let above=otherValue==null||value>otherValue||(value===otherValue&&s.uid==='111');
      const point=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[p.dataIndex,value]);
      const rect=chart.getModel().getComponent('grid')?.coordinateSystem?.getRect();
      if(!rect||!point||!Number.isFinite(point[1]))return {hideOverlap:false};
      if(general){
-      const ranked=definitions.filter(d=>!fields.unidade.value||fields.unidade.value===d.uid).map(d=>({uid:d.uid,value:row?.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||a.uid.localeCompare(b.uid));
+      const ranked=definitions.filter(d=>PcpMulti.includes(fields.unidade.value,d.uid)).map(d=>({uid:d.uid,value:row?.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||a.uid.localeCompare(b.uid));
       const rank=ranked.findIndex(d=>d.uid===s.uid);above=rank===0;
       if(ranked.length===3&&rank===1){const x=Math.max(rect.x+2,Math.min(rect.x+rect.width-p.labelRect.width-2,point[0]+12));return {dx:x-p.labelRect.x,dy:point[1]-p.labelRect.height/2-p.labelRect.y,hideOverlap:false};}
      }
@@ -85,7 +85,7 @@ window.PcpComparativo=(()=>{
     if(mobileOverview){
      const labelLayers=series.filter(s=>!s.id.endsWith('_cirurgico')&&s.id!=='meta_mortos').map(s=>({...s,id:s.id+'_rotulos',type:'scatter',symbolSize:0,silent:true,zlevel:3,lineStyle:undefined,tooltip:{show:false},label:{...s.label,show:true},labelLayout:p=>{
       const rawIndex=chart.getModel().getSeriesByIndex(p.seriesIndex).getData().getRawIndex(p.dataIndex),row=rows[rawIndex],rect=chart.getModel().getComponent('grid')?.coordinateSystem?.getRect();if(!row||!rect)return {hideOverlap:false};
-      const ranked=definitions.filter(d=>!d.surgical&&(!fields.unidade.value||fields.unidade.value===d.uid)).map(d=>({uid:d.uid,value:row.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||b.uid.localeCompare(a.uid));
+      const ranked=definitions.filter(d=>!d.surgical&&(PcpMulti.includes(fields.unidade.value,d.uid))).map(d=>({uid:d.uid,value:row.valores.find(v=>v.unidade===d.uid)?.[d.metric]})).filter(d=>d.value!=null).sort((a,b)=>b.value-a.value||b.uid.localeCompare(a.uid));
       const rank=ranked.findIndex(d=>d.uid===s.id);if(rank<0)return {hideOverlap:false};const height=p.labelRect.height||22,top=rect.y+2,bottom=rect.y+rect.height-2;
       const positions=ranked.map((d,i)=>{const y=chart.convertToPixel({xAxisIndex:0,yAxisIndex:0},[rawIndex,d.value])[1];return Math.max(top,Math.min(bottom-height,i===0?y-height-9:i===ranked.length-1?y+9:y-height/2));});
       for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+height+5);const overflow=Math.max(0,positions.at(-1)+height-bottom);for(let i=0;i<positions.length;i++)positions[i]-=overflow;
@@ -103,7 +103,7 @@ window.PcpComparativo=(()=>{
     if(periodChanged)viewport.scrollLeft=0;
     const chartWidth=mobileOverview?viewport.clientWidth:Math.max(viewport.clientWidth,labels.length*76+100);element.style.width=chartWidth+'px';chart.resize({width:chartWidth,height:element.clientHeight});
     const zoom=mobileOverview?PcpMobileScroll.config(chart,rows.length,periodChanged,{filterMode:'filter'}):[];
-    if(mobileOverview){const legend=panel.querySelector('.pcp-mobile-chart-legend');legend.innerHTML=definitions.filter(s=>!fields.unidade.value||s.uid===fields.unidade.value).map(s=>'<span><i style="background:'+s.color+'"></i>'+esc(s.surgical?'Cirúrgico · '+(s.uid==='111'?'RA':'AN'):s.uid==='111'?'Real Alimentos':s.uid==='geral'?'Geral':'Ave Nova')+'</span>').join('');}
+    if(mobileOverview){const legend=panel.querySelector('.pcp-mobile-chart-legend');legend.innerHTML=definitions.filter(s=>PcpMulti.includes(fields.unidade.value,s.uid)).map(s=>'<span><i style="background:'+s.color+'"></i>'+esc(s.surgical?'Cirúrgico · '+(s.uid==='111'?'RA':'AN'):s.uid==='111'?'Real Alimentos':s.uid==='geral'?'Geral':'Ave Nova')+'</span>').join('');}
     chart.setOption({animation:!periodChanged,animationDuration:0,animationDurationUpdate:periodChanged?0:400,animationEasingUpdate:'cubicOut',color:['#ff1515','#168cff'],legend:{show:!mobileOverview,top:6,left:0,type:'scroll',icon:'circle',itemWidth:9,itemHeight:9,textStyle:{fontSize:10,color:textColor}},tooltip:{show:!mobileOverview,triggerOn:mobileOverview?'none':'mousemove|click',trigger:'axis',axisPointer:{show:!mobileOverview},valueFormatter:format},grid:{left:48,right:mobileOverview?22:30,top:mobileOverview?26:58,bottom:mobileOverview?70:48,containLabel:false},dataZoom:zoom,xAxis:{type:'category',triggerEvent:true,data:labels,axisLine:{show:false},axisTick:{show:false},axisLabel:{interval:0,margin:14,color:textColor,fontSize:11,cursor:daily&&!drilledWeeks[index]?'default':'pointer'}},yAxis:{type:'value',min,max,splitNumber:4,axisLabel:{formatter:v=>(opportunities||mix||general||mobileOverview)?percent(v,axisPrecision):Math.round(v*100)+'%',color:textColor,fontSize:11},splitLine:{lineStyle:{type:'dotted',color:'#ddd8d3'}}},series,graphic:!numbers.length?[{type:'text',left:'center',top:'middle',style:{text:'Nenhum registro disponível para os filtros selecionados.',fill:textColor,fontSize:13}}]:[]},{notMerge:true});
     if(periodChanged){viewport.scrollLeft=0;requestAnimationFrame(()=>{if(renderedPeriods[index]===period){chart.resize({width:chartWidth,height:element.clientHeight});viewport.scrollLeft=0;}});}
    });
@@ -114,7 +114,7 @@ window.PcpComparativo=(()=>{
    try{
     const data=await apiGet(endpoint,params,{signal:controller.signal,silent:true});if(id!==generation)return;
     if(data.ok!==true||(!general&&data.pagina!==pageNumber)||data.contrato!==contract||!Array.isArray(data.serie))throw Error('Resposta incompatível com as medidas do comparativo.');
-    render(data);window.PcpReportHeader?.update(data.ultima_atualizacao);const updated=data.ultima_atualizacao?new Date(data.ultima_atualizacao).toLocaleString('pt-BR'):'não informada';lastConfirmed='Dados reais · '+(general?(data.semanal||[]).length+' semana(s) no mês '+data.mes_diario:data.serie.length+' semana(s)')+' · período exibido: '+data.periodo.inicio+' a '+data.periodo.fim+' · '+(fields.unidade.selectedOptions[0]?.textContent||'Ambas as unidades')+' · '+(fields.semana.value?fields.semana.selectedOptions[0].textContent:'Todas as semanas')+' · somente dias com abate · até D−1';status.textContent=lastConfirmed;
+    render(data);window.PcpReportHeader?.update(data.ultima_atualizacao);const updated=data.ultima_atualizacao?new Date(data.ultima_atualizacao).toLocaleString('pt-BR'):'não informada';lastConfirmed='Dados reais · '+(general?(data.semanal||[]).length+' semana(s) no mês '+data.mes_diario:data.serie.length+' semana(s)')+' · período exibido: '+data.periodo.inicio+' a '+data.periodo.fim+' · '+([...fields.unidade.selectedOptions].map(o=>o.textContent).join(', ')||'Todas as unidades')+' · '+(fields.semana.value?[...fields.semana.selectedOptions].map(o=>o.textContent).join(', '):'Todas as semanas')+' · somente dias com abate · até D−1';status.textContent=lastConfirmed;
    }catch(e){if(id!==generation||e.name==='AbortError')return;const denied=e.status===401||e.status===403;if(denied){for(const chart of charts)chart.clear();lastData=null;drilledWeeks.fill(null);drillBars.forEach(bar=>bar.update(false,null));lastConfirmed=null;}error.textContent=e.message+(lastConfirmed?' Os gráficos mantêm a última consulta confirmada; os novos filtros ainda não foram aplicados.':'');error.classList.remove('hidden');status.textContent=lastConfirmed||'Consulta não concluída.';}
    finally{if(id===generation)loading=false;}
   }
@@ -125,7 +125,7 @@ window.PcpComparativo=(()=>{
   setInterval(()=>{if(!document.hidden&&!loading)load();},60000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!loading)load();});
   if(groupNumber>=1&&groupNumber<=4)window.matchMedia('(max-width:767px)').addEventListener('change',()=>location.reload());
-  load();
+  PcpMulti.enhance(filter);load();
  }
  return {mount};
 })();

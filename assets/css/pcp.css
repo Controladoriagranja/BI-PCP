@@ -413,3 +413,44 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
  .pcp-report .cg-dialog>.pcp-mobile-scroll-host>.cg-line-chart{height:auto!important;min-height:140px!important;flex:1 1 0!important;width:100%}
  .pcp-report .cg-dialog .cg-chart-filters{flex:none}
 }
+
+/* Apresentação dos filtros múltiplos; preserva o componente e suas seleções. */
+.pcp-report .checkbox-multiselect.open{z-index:201}
+.pcp-report .checkbox-multiselect .checkbox-multiselect-panel{
+ box-sizing:border-box;min-width:0;width:max(100%,220px);max-width:calc(100vw - 32px);
+ max-height:320px;border:1px solid #ded8d0;border-radius:10px;background:#fff;color:#342725;
+ box-shadow:0 6px 20px #3427251a;overflow:hidden;counter-reset:pcp-filter-options;
+}
+.pcp-report .checkbox-multiselect.open .checkbox-multiselect-panel{display:flex;flex-direction:column}
+.pcp-report .checkbox-multiselect .checkbox-multiselect-search-wrap{flex:none;padding:9px;border-bottom:1px solid #eee8e2}
+.pcp-report .checkbox-multiselect .checkbox-multiselect-search{
+ box-sizing:border-box;width:100%;height:36px;min-height:36px;margin:0;padding:0 10px;
+ border:1px solid #ded8d0;border-radius:7px;background:#f7f5f1;color:#342725;font-size:12px;
+}
+.pcp-report .checkbox-multiselect .checkbox-multiselect-list{
+ flex:1 1 auto;min-height:0;max-height:232px;overflow-y:auto;overscroll-behavior:contain;padding:0 6px 6px;
+}
+.pcp-report .checkbox-multiselect .checkbox-option{
+ box-sizing:border-box;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+ gap:9px;min-height:38px;margin:0;padding:8px;border-radius:4px;color:#766b64;font-size:12px;text-align:left;
+}
+.pcp-report .checkbox-multiselect .checkbox-option[hidden]{display:none}
+.pcp-report .checkbox-multiselect .checkbox-option:not(.checkbox-option-all){counter-increment:pcp-filter-options}
+.pcp-report .checkbox-multiselect .checkbox-option input[type=checkbox]{
+ box-sizing:border-box;display:block;flex:0 0 14px;width:14px;min-width:14px;max-width:14px;
+ height:14px;min-height:14px;margin:0;padding:0;accent-color:var(--primary);
+}
+.pcp-report .checkbox-multiselect .checkbox-option span{min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.pcp-report .checkbox-multiselect .checkbox-option-all{
+ position:sticky;top:0;z-index:1;flex-shrink:0;border-radius:0;border-bottom:1px solid #eee8e2;background:#fff;font-weight:600;
+}
+.pcp-report .checkbox-multiselect .checkbox-option:hover{background:#f7f5f1}
+.pcp-report .checkbox-multiselect .checkbox-multiselect-panel::after{
+ content:counter(pcp-filter-options) " opções";display:block;flex:none;padding:8px 14px;
+ border-top:1px solid #eee8e2;background:#fff;color:#766b64;font-size:11px;line-height:16px;
+}
+.pcp-report :is(.cg-filter-grid,.pa-filter-grid,.pcp-comparativo-filter-grid)>label:last-child .checkbox-multiselect-panel{left:auto;right:0}
+@media(max-width:767px){
+ .pcp-report .checkbox-multiselect .checkbox-multiselect-panel{width:100%;max-height:min(320px,50dvh)}
+ .pcp-report .checkbox-multiselect .checkbox-multiselect-search{font-size:16px}
+}

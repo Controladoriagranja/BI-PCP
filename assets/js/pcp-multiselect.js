@@ -11,7 +11,7 @@ window.PcpMulti=(()=>{
    selected=[...controller.getState(field).selected];for(const o of select.options)o.selected=selected.includes(o.value);
    select.dispatchEvent(new Event('change',{bubbles:true}));
   }});controller.register();
-  function sync(){const options=[...select.options].filter(o=>o.value).map(o=>({value:o.value,label:o.textContent}));selected=selected.filter(v=>options.some(o=>o.value===v));for(const o of select.options)o.selected=selected.includes(o.value);controller.renderMultiOptions(field,options,selected);const search=controller.getState(field).search;if(search?.value)search.dispatchEvent(new Event('input'));}
+  function sync(){const options=[...select.options].filter(o=>o.value).map(o=>({value:o.value,label:o.textContent}));for(const o of select.options)o.selected=selected.includes(o.value);controller.renderMultiOptions(field,options,selected);const search=controller.getState(field).search;if(search?.value)search.dispatchEvent(new Event('input'));}
   Object.defineProperty(select,'value',{configurable:true,get:()=>selected.join(','),set:v=>{selected=values(v);sync();}});
   select.pcpMulti={controller,field,sync};new MutationObserver(sync).observe(select,{childList:true,subtree:true});sync();
  });}

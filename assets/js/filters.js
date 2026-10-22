@@ -205,6 +205,7 @@ class FilterController {
             this.closeAll(host);
             host.classList.toggle("open", open);
             state.button.setAttribute("aria-expanded", String(open));
+            if(open && !state.search?.value.trim()) this.orderSelectedFirst(state);
 
         });
 
@@ -213,7 +214,11 @@ class FilterController {
         });
 
         if (state.search) {
+            state.search.addEventListener("keydown", event => {
+                if(event.key === "Enter"){event.preventDefault();event.stopPropagation();}
+            });
             state.search.addEventListener("input", () => {
+                if(!state.search.value.trim()) this.orderSelectedFirst(state);
                 const query = state.search.value
                     .trim()
                     .toLocaleLowerCase("pt-BR");
@@ -358,19 +363,26 @@ normalizeOptions(field, raw) {
         }
 
         // API options are availability, never the source of selected values.
+        const known = new Map((state.options || []).map(option => [option.value, option]));
         state.options = options;
         if (selected !== undefined) {
             state.selected = new Set(this.normalizeArray(selected));
         }
 
         const available = new Set(options.map(option => option.value));
-        state.selected = new Set([...state.selected].filter(value => available.has(value)));
+        options = [...options, ...[...state.selected].filter(value => !available.has(value)).map(value => known.get(value) || {value, label:value})];
+        state.options = options;
+        if(state.search?.value.trim() && state.displayOptions){
+            const rank = new Map(state.displayOptions.map((option,index)=>[option.value,index]));
+            options = [...options].sort((a,b)=>(rank.get(a.value) ?? Infinity)-(rank.get(b.value) ?? Infinity));
+        }
         state.displayOptions = options;
 
         const allSelected =
             options.length > 0
             && state.selected.size === options.length;
 
+        const scrollTop = state.list.scrollTop;
         state.list.innerHTML = `
             <label
                 class="checkbox-option checkbox-option-all"
@@ -486,6 +498,15 @@ normalizeOptions(field, raw) {
 
         syncSelectAll();
         this.updateButton(field);
+        if(state.search?.value.trim()) state.search.dispatchEvent(new Event("input"));
+        else this.orderSelectedFirst(state);
+        state.list.scrollTop = scrollTop;
+    }
+
+    orderSelectedFirst(state) {
+        const rows = [...state.list.querySelectorAll("[data-filter-option]:not(.checkbox-option-all)")];
+        rows.sort((a,b)=>Number(state.selected.has(b.querySelector("input").value))-Number(state.selected.has(a.querySelector("input").value)));
+        rows.forEach(row=>state.list.appendChild(row));
     }
 
     async loadOptions({

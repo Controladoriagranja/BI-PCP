@@ -28,20 +28,21 @@
   if(!modal.open){previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';modal.showModal();}
   modal.scrollTop=0;modal.querySelector('.if-close').focus({preventScroll:true});
  }
- function addButton(el,all=false){
-  if(el.querySelector(':scope > [data-indicator-formula]'))return;
-  const label=labelOf(el),metric=find(label);if(!metric&&!all)return;
-  const button=document.createElement('button');button.type='button';button.className='if-button';button.dataset.indicatorFormula=all&&!metric?'all':'metric';button.textContent='ƒx';
-  button.title=metric?'Ver fórmula de '+metric.nome:'Ver fórmulas deste relatório';button.setAttribute('aria-label',button.title);button.setAttribute('aria-haspopup','dialog');
-  button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const selected=find(label);open(selected?[selected]:docs(),button);});
-  el.append(document.createTextNode(' '),button);
+ function addButton(header){
+  if(header.querySelector(':scope > [data-indicator-formula]'))return;
+  header.classList.add('if-formula-header');
+  const button=document.createElement('button');button.type='button';button.className='if-button';button.dataset.indicatorFormula='all';button.textContent='ƒx';
+  button.title='Ver fórmulas deste relatório';button.setAttribute('aria-label',button.title);button.setAttribute('aria-haspopup','dialog');
+  button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();open(docs(),button);});
+  header.append(button);
  }
  let scheduled=false;
  function scan(){scheduled=false;
   if(!docs().length)return;
-  document.querySelectorAll('.com-kpi > span,.cg-table tbody tr > th:first-child,.ef-table tbody tr > th:first-child,.pa-table thead th').forEach(el=>addButton(el));
-  document.querySelectorAll('.card > header h2,.card > header h3').forEach(el=>{if(!el.closest('dialog')&&!/filtro|detalhamento|pendencia/i.test(norm(labelOf(el))))addButton(el,true);});
-  const title=document.querySelector('#titulo,#page-title,.page-title h1,h1');if(title&&!title.closest('dialog'))addButton(title,true);
+  document.querySelectorAll('.card > header').forEach(header=>{
+   const heading=header.querySelector('h2,h3');
+   if(heading&&!header.closest('dialog')&&!/filtro|pendencia/i.test(norm(labelOf(heading))))addButton(header);
+  });
  }
  const observer=new MutationObserver(records=>{if(records.every(r=>r.target.closest?.('.if-dialog')))return;if(!scheduled){scheduled=true;requestAnimationFrame(scan);}});
  observer.observe(document.body,{childList:true,subtree:true});scan();

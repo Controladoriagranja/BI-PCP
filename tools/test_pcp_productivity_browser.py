@@ -61,7 +61,20 @@ TEST = r'''
   const originalStyle=renditionStyle();
   assert(document.getElementById('cgAtualizar')&&!document.getElementById('cgAtualizar').hidden,'Atualizar original presente em Rendimento');
   const originalSnapshot=pcpRendimentoSnapshot();
-  if(window.officialBaseline)assert(JSON.stringify(originalSnapshot)===JSON.stringify(officialBaseline.snapshot),'Rendimento deve coincidir com o oficial anterior: '+JSON.stringify({originalSnapshot,baseline:officialBaseline.snapshot}));
+  const comparable=snapshot=>({daily:snapshot.daily,monthly:snapshot.monthly,units:snapshot.units,update:snapshot.update});
+  if(window.officialBaseline)assert(JSON.stringify(comparable(originalSnapshot))===JSON.stringify(comparable(officialBaseline.snapshot)),'Tabelas, opções e Atualizar devem coincidir com o oficial anterior');
+  function checkRendimentoHeader(){
+   const filter=document.querySelector('.cg-yield-filters'),actions=filter.querySelector('.pcp-comparativo-filter-head>div');
+   assert([...actions.children].map(el=>el.id||el.className).join('|')==='cgAtualizar|pcp-period-flags|cgLimpar','Ordem Atualizar, flags e Limpar filtros');
+   assert(filter.scrollWidth<=filter.clientWidth+1,'Filtros de Rendimento sem transbordamento');
+   if(innerWidth>=1100){
+    const items=[...filter.querySelectorAll('.cg-filter-grid .checkbox-multiselect-trigger'),document.getElementById('cgAtualizar'),actions.querySelector('.pcp-period-flags'),document.getElementById('cgLimpar')];
+    const rects=items.map(item=>item.getBoundingClientRect()),bottoms=rects.map(rect=>rect.bottom);
+    assert(items.length===8&&Math.max(...bottoms)-Math.min(...bottoms)<=3,'Filtros e botões de Rendimento na mesma linha');
+    assert(rects.every((rect,index)=>index===0||rect.left>=rects[index-1].right-1),'Mesma ordem visual: filtros, Atualizar, flags e Limpar');
+   }
+  }
+  checkRendimentoHeader();
   flag('produtividade').click();await flush();
   assert(document.getElementById('cgAtualizar').hidden&&getComputedStyle(document.getElementById('cgAtualizar')).display==='none','Atualizar oculto em Produtividade');
   const countComparativo=()=>pcpTestCalls.filter(call=>call.endpoint==='/api/pcp/comparativo/cirurgico-geral').length;
@@ -167,10 +180,12 @@ TEST = r'''
   assert(rendimentoMarkup()===originalRendimento,'Preservar tabela de Rendimento');
   assert(JSON.stringify(renditionStyle())===JSON.stringify(originalStyle),'Preservar layout de filtros de Rendimento');
   assert(JSON.stringify(pcpRendimentoSnapshot())===JSON.stringify(originalSnapshot),'Snapshot de Rendimento restaurado');
+  checkRendimentoHeader();
   const callsBeforeUpdate=countComparativo();document.getElementById('cgAtualizar').click();await flush();assert(countComparativo()===callsBeforeUpdate+1,'Atualizar original consulta o Rendimento');
   const callsBeforeAuto=countComparativo();for(const timer of pcpTestIntervals)timer.callback();await flush();assert(countComparativo()===callsBeforeAuto+1,'Atualização automática de Rendimento preservada');
   flag('produtividade').click();await flush();unit.value='10,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
   if(new URLSearchParams(location.search).has('monthly')){const style=document.createElement('style');style.textContent='.page-header,.filter-card,#estadoConsulta,#cgProdutividade>article:first-child{display:none!important}';document.head.append(style);const box=document.querySelector('.cg-monthly-scroll');box.scrollTop=box.scrollHeight;window.scrollTo(0,0);await flush();}
+  if(new URLSearchParams(location.search).has('rendimento')){flag('rendimento').click();await flush();checkRendimentoHeader();}
   assert(!errors.length,'Erros JS: '+errors.join('; '));
   document.getElementById('test-result').textContent=JSON.stringify({ok:true,width:innerWidth,selections:results.length,results,rendimentoPreserved:true,officialBaselinePreserved:!!window.officialBaseline});
  }catch(e){document.getElementById('test-result').textContent=JSON.stringify({ok:false,message:e.message,stack:e.stack,errors});}
@@ -187,6 +202,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--widths', default='1366,1440,1920,1024,600,492')
     parser.add_argument('--baseline', help='ZIP do oficial anterior para comparar Rendimento')
+    parser.add_argument('--rendimento', action='store_true', help='Capturar o alinhamento de Rendimento')
     parser.add_argument('--monthly', action='store_true', help='Capturar o acumulado mensal na imagem')
     parser.add_argument('--height', type=int, default=900)
     args = parser.parse_args()
@@ -216,7 +232,9 @@ def main():
             url = f'http://127.0.0.1:{server.server_port}/outputs/produtividade-layout/preview.html?relatorio=g8'
             if args.monthly:
                 url += '&monthly=1'
-            suffix = '-monthly' if args.monthly else ''
+            if args.rendimento:
+                url += '&rendimento=1'
+            suffix = '-rendimento' if args.rendimento else ('-monthly' if args.monthly else '')
             command = [str(EDGE), '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
                        '--disable-background-networking', f'--user-data-dir={OUT / ("profile-"+str(width))}',
                        f'--window-size={width+24},{args.height}', '--force-device-scale-factor=1', '--virtual-time-budget=20000',
@@ -247,7 +265,7 @@ def main():
             print(json.dumps(summary if value['ok'] else value, ensure_ascii=False))
     finally:
         server.shutdown()
-    result_name = 'results-monthly.json' if args.monthly else ('results.json' if args.height == 900 else 'results-visual.json')
+    result_name = 'results-rendimento.json' if args.rendimento else ('results-monthly.json' if args.monthly else ('results.json' if args.height == 900 else 'results-visual.json'))
     (OUT / result_name).write_text(json.dumps(all_results, indent=2, ensure_ascii=False), encoding='utf-8')
     raise SystemExit(0 if all(r['ok'] for r in all_results) else 1)
 

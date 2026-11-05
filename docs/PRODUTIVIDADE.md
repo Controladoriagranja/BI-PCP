@@ -56,3 +56,15 @@ backup-oficial.zip, acompanhado de manifesto SHA-256. O diretório outputs já �
 ignorado pelo Git. As versões de cache de JS e CSS foram atualizadas no index.
 Nada foi publicado automaticamente. O commit/push deve ser feito no repositório
 Controladoriagranja/BI-PCP após a revisão.
+
+## Alinhamento de Rendimento — 05/11/2026
+
+Por solicitação posterior à migração, os filtros e ações de Rendimento passaram
+a ocupar uma única linha no desktop, seguindo a organização de Produtividade.
+Ordem: Grupo, Ano, Mês, Dia, Unidade, Atualizar, flags Rendimento/Produtividade
+e Limpar filtros. Os nomes, seleções, tabelas, cálculos e timers foram mantidos.
+Nas telas menores, os campos se reorganizam. Produtividade não foi redesenhada.
+O teste de baseline continua comparando tabelas, opções e estilo do botão
+Atualizar; o layout dos filtros agora é comparado antes/depois da troca de aba
+e validado quanto à ordem, alinhamento e ausência de transbordamento.
+Backup anterior ao ajuste em outputs/backups/rendimento-linha-20261105-141833/.

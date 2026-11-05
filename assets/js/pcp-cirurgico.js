@@ -569,7 +569,7 @@ window.PcpCirurgico=(()=>{
  }
  function mount(){
   const mobile=PcpMobileScroll.active();
-  const filter=document.querySelector('.filter-card');filter.className='card pcp-comparativo-filtros cg-filters';
+  const filter=document.querySelector('.filter-card');filter.className='card pcp-comparativo-filtros cg-filters cg-yield-filters';
   filter.innerHTML='<div class="pcp-comparativo-filter-head"><h2>Filtros</h2><div><button type="button" id="cgAtualizar" class="button">Atualizar</button><button type="button" id="cgLimpar" class="button">Limpar filtros</button></div></div><div class="cg-filter-grid"><label>Grupo<select id="cgGrupo"><option value="">Todos</option><option value="familias">Famílias e miúdos</option><option value="producao">Produção e perdas</option></select></label><label>Ano<select id="cgAno"></select></label><label>Mês<select id="cgMes">'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+new Date(2026,i,1).toLocaleDateString('pt-BR',{month:'long'})+'</option>').join('')+'</select></label><label>Dia<select id="cgDia"><option value="">Todos</option></select></label><label>Unidade<select id="cgUnidade"><option value="">Todas</option><option value="10">Ave Nova</option><option value="1">1º turno - AN</option><option value="2">2º turno - AN</option><option value="111">Real Alimentos</option></select></label></div>';
 
   const content=document.getElementById('pcpConteudo');content.className='pcp-report-panels';content.innerHTML='<article class="card pcp-report-panel"><header><h2>Indicadores por dia</h2></header><div id="cgDiario" class="cg-scroll"></div></article><article class="card pcp-report-panel"><header><h2>Acumulado mensal</h2><div hidden><p>Razões calculadas pelos pesos acumulados até D−1. A seleção de dia limita o quadro diário; o acumulado mantém o mês escolhido.</p><p>Condenação: menor ou igual à meta. Demais indicadores: maior ou igual à meta. Ausência de base é apresentada como —.</p></div></header><div id="cgMensal" class="cg-scroll"></div></article>';
@@ -592,6 +592,7 @@ window.PcpCirurgico=(()=>{
   const indicatorFlags=PcpPeriodFlags.create('cgTipoIndicador',indicatorMode,mode=>{
    indicatorMode=mode;
    filter.classList.toggle('cg-productivity-filters',mode==='produtividade');
+   filter.classList.toggle('cg-yield-filters',mode==='rendimento');
    layoutIndicatorMode(mode);
    const monthChanged=monthFilter.sync(mode);
    unitFilter.sync(mode);
@@ -611,14 +612,14 @@ window.PcpCirurgico=(()=>{
   const filterRow=document.createElement('div');filterRow.className='cg-filter-row';filterRow.hidden=true;
   const originalFilterGrid=filter.querySelector('.cg-filter-grid'),originalFilterActions=filter.querySelector('.pcp-comparativo-filter-head>div');
   // Mantém a estrutura e o botão Atualizar oficiais em Rendimento.
-  originalFilterActions.append(indicatorFlags);filter.append(filterRow);
+  originalFilterActions.insertBefore(indicatorFlags,document.getElementById('cgLimpar'));filter.append(filterRow);
   function layoutIndicatorMode(mode){
    const production=mode==='produtividade';
    document.getElementById('cgAtualizar').hidden=production;
    if(production){
     filterRow.append(originalFilterGrid,indicatorToolbar);indicatorToolbar.append(indicatorFlags);
    }else{
-    filter.insertBefore(originalFilterGrid,filterRow);originalFilterActions.append(indicatorFlags);
+    filter.insertBefore(originalFilterGrid,filterRow);originalFilterActions.insertBefore(indicatorFlags,document.getElementById('cgLimpar'));
    }
    filterRow.hidden=!production;
   }

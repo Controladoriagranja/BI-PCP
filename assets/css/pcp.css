@@ -702,3 +702,15 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 /* Atualizar permanece disponivel em Rendimento. */
 .pcp-report[data-page="report-g8"] .cg-productivity-filters #cgAtualizar{display:none}
 .pcp-report[data-page="report-g8"] .cg-filter-row[hidden]{display:none}
+
+/* Rendimento: mesma linha e ordem de controles da Produtividade no desktop. */
+@media(min-width:1100px){
+ .pcp-report[data-page="report-g8"] .cg-filters.cg-yield-filters{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;align-items:end;gap:12px;padding:12px 14px}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters>.pcp-comparativo-filter-head,
+ .pcp-report[data-page="report-g8"] .cg-yield-filters>.pcp-comparativo-filter-head>div{display:contents}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters>.pcp-comparativo-filter-head>h2{grid-column:1;grid-row:1;margin:0 0 10px;font-size:13px}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters>.cg-filter-grid{grid-column:2;grid-row:1;width:100%;min-width:0;grid-template-columns:minmax(110px,1.1fr) minmax(70px,.6fr) minmax(100px,.9fr) minmax(90px,.8fr) minmax(150px,1.3fr);gap:12px}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters #cgAtualizar{grid-column:3;grid-row:1}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters>.pcp-comparativo-filter-head>div>.pcp-period-flags{grid-column:4;grid-row:1;align-self:end}
+ .pcp-report[data-page="report-g8"] .cg-yield-filters #cgLimpar{grid-column:5;grid-row:1}
+}

@@ -9,9 +9,10 @@ const list=value=>Array.from(app.productivitySelection(value));
 assert.deepEqual(list('1,2'),['10']);
 assert.deepEqual(list('1,2,111'),['10','111']);
 assert.deepEqual(list('10,1,2,111'),['10','111']);
-assert.deepEqual(list('1,111'),['1','111']);
-assert.deepEqual(Array.from(app.selectedHeadCompanies('1,111')),['10','111']);
-assert.deepEqual(Array.from(app.selectedHeadTurns('1,111','10')),['1']);
+assert.deepEqual(list('1,111'),['111']);
+assert.deepEqual(list('2,111'),['111']);
+assert.deepEqual(Array.from(app.selectedHeadCompanies('1,111')),['111']);
+assert.deepEqual(Array.from(app.selectedHeadTurns('1','10')),['1']);
 assert.equal(app.selectedHeadTurns('1,111','111'),null,'Real permanece consolidada');
 for(const [date,year,week] of [['2020-12-28',2020,53],['2021-01-01',2020,53],['2021-01-04',2021,1],['2025-12-29',2026,1],['2026-11-02',2026,45]]){
  const result=app.productionWeek(date);assert.equal(result.year,year);assert.equal(result.week,week);
@@ -28,8 +29,12 @@ assert.doesNotMatch(select.innerHTML,/value="both"/,'Não há opção combinada 
 assert.match(select.innerHTML,/1° Turno - AN/);assert.match(select.innerHTML,/2° Turno - AN/);
 const click=(value,checked=true)=>listener({target:{value,checked,matches:()=>true,hasAttribute:()=>false},stopImmediatePropagation(){}});
 click('1');assert.equal(select.value,'1');
-click('111');assert.equal(select.value,'1,111');
-click('2');assert.equal(select.value,'10,111');
+click('111');assert.equal(select.value,'111','Real cancela o primeiro turno');
+click('2');assert.equal(select.value,'2','Segundo turno cancela Real');
+click('111');assert.equal(select.value,'111','Real cancela o segundo turno');
+click('1');assert.equal(select.value,'1','Primeiro turno cancela Real');
+click('2');assert.equal(select.value,'10','Dois turnos viram Ave Nova');
+click('111');assert.equal(select.value,'10,111','Real pode combinar com Ave Nova total');
 assert.equal(controller.summary({selected:new Set(['10','111'])}),'Real Alimentos + Ave Nova');
 click('10',false);assert.equal(select.value,'111');
 click('111',false);assert.equal(select.value,'10','Ao esvaziar, mantém uma unidade pré-selecionada');

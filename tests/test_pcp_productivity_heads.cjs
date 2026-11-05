@@ -70,8 +70,8 @@ module.exports = (async () => {
   assert.ok(selected.calls.filter(c => c.params.pagina).every(c => c.params.empresa === undefined), 'Não depende do código de importação para consultar a empresa');
   const shifts = api([row(69414, '10', { turno_codigo: '1' }), row(39501, '10', { turno_codigo: '2' }), row(80560, '111')]);
   const shifted = plain(await heads.load(shifts.get, periods, '1,111', signal));
-  assert.deepEqual(shifted.map(r => [r.empresa_codigo, r.quantidade_cabecas]), [['10', 69414], ['111', 80560]]);
-  assert.ok(shifts.calls.some(c => c.endpoint.endsWith('diario_industria_turnos') && c.params.turno === '1'));
+  assert.deepEqual(shifted.map(r => [r.empresa_codigo, r.quantidade_cabecas]), [['111', 80560]]);
+  assert.ok(!shifts.calls.some(c => c.endpoint.endsWith('diario_industria_turnos')), 'Real não consulta turnos da Ave Nova em seleção incompatível');
   const bothShifts = api([row(69414, '10', { turno_codigo: '1' }), row(39501, '10', { turno_codigo: '2' })]);
   assert.equal((await heads.load(bothShifts.get, periods, '1,2', signal))[0].quantidade_cabecas, 108915);
   const lastPage = api([row(1), row(2), row(108915)]);

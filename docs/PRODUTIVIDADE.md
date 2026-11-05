@@ -68,3 +68,26 @@ O teste de baseline continua comparando tabelas, opções e estilo do botão
 Atualizar; o layout dos filtros agora é comparado antes/depois da troca de aba
 e validado quanto à ordem, alinhamento e ausência de transbordamento.
 Backup anterior ao ajuste em outputs/backups/rendimento-linha-20261105-141833/.
+
+## Ajustes de navegação e seleção — 05/11/2026
+
+- Os botões de fórmulas não são gerados nos quadros de Produtividade.
+  Os botões dos quadros de Rendimento e das demais telas são preservados.
+- Real Alimentos e os turnos individuais da Ave Nova são exclusivos: clicar
+  em Real desmarca 1T/2T; clicar em 1T/2T desmarca Real. Marcar ambos os turnos
+  continua convertendo a seleção em Ave Nova. Ave Nova total + Real continua
+  permitido. Nomes e ordem das quatro opções permanecem os mesmos.
+- Clicar em um dia abre Rendimento com o ano, mês, dia e unidade/turno do
+  calendário. A transição substitui os filtros antigos de Rendimento pelos
+  filtros de Produtividade, com Grupo sem restrição, como na aba de origem.
+- Semana cheia permite navegar por datas dos meses/anos vizinhos. Datas após
+  D−1 não navegam. Um dia sem registros continua explicitamente selecionado,
+  inclusive após atualização automática, sem ampliar o filtro para todo o mês.
+- Fórmulas, layout e atualização automática de Rendimento continuam disponíveis.
+
+Foram validadas cinco seleções válidas em seis larguras, os dois sentidos das
+trocas Real/turno, a conversão 1T+2T, as fórmulas apenas fora de Produtividade,
+a navegação de todas as unidades para 05/10/2026, dia sem dados com atualização
+automática e navegação para 29/12/2025 a partir da semana cheia de janeiro/2026.
+Testes locais com API simulada; nenhuma publicação ou alteração do banco.
+Backup anterior em outputs/backups/produtividade-navegacao-20261105-162047/.

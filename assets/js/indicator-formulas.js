@@ -40,6 +40,10 @@
  function scan(){scheduled=false;
   if(!docs().length)return;
   document.querySelectorAll('.card > header').forEach(header=>{
+   if(header.closest('#cgProdutividade')){
+    header.querySelectorAll(':scope > [data-indicator-formula]').forEach(button=>button.remove());
+    header.classList.remove('if-formula-header');return;
+   }
    const heading=header.querySelector('h2,h3');
    if(heading&&!header.closest('dialog')&&!/filtro|pendencia/i.test(norm(labelOf(heading))))addButton(header);
   });

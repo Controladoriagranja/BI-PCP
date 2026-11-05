@@ -12,6 +12,7 @@ window.PcpCirurgico=(()=>{
  function productivitySelection(units){
   const selected=new Set(PcpMulti.values(units).flatMap(value=>value==='both'?['10','111']:[value]));
   if(selected.has('10')||(selected.has('1')&&selected.has('2'))){selected.add('10');selected.delete('1');selected.delete('2');}
+  if(selected.has('111')&&!selected.has('10')){selected.delete('1');selected.delete('2');}
   return productivityUnitOptions.map(option=>option[0]).filter(value=>selected.has(value));
  }
  function headCompany(value){
@@ -300,7 +301,8 @@ window.PcpCirurgico=(()=>{
      if(event.target.checked){
       chosen.add(value);
       if(value==='10'){chosen.delete('1');chosen.delete('2');}
-      else if(value==='1'||value==='2')chosen.delete('10');
+      else if(value==='1'||value==='2'){chosen.delete('10');chosen.delete('111');}
+      else if(value==='111'){chosen.delete('1');chosen.delete('2');}
      }else chosen.delete(value);
      unit=productivitySelection([...chosen].join(',')).join(',')||'10';
      select.value=unit;select.dispatchEvent(new Event('change',{bubbles:true}));
@@ -346,7 +348,7 @@ window.PcpCirurgico=(()=>{
   const weights=productivityHeaderWeights(rows);
   return '<span class="cg-production-day-header">'+badge+(weights?'<span class="cg-production-day-weights">'+weights+'</span>':'')+'</span>';
  }
- function createProductivityCalendar(content,fields,onNavigate,isLoading,getHeads=()=>({status:'idle',rows:[]})){
+ function createProductivityCalendar(content,fields,onNavigate,isLoading,getHeads=()=>({status:'idle',rows:[]}),onDaySelect=null){
   const root=document.createElement('section');root.id='cgProdutividade';root.hidden=true;
   root.innerHTML='<article class="card pcp-report-panel"><header class="cg-production-header"><h2>Calendário de Produção</h2><div class="cg-production-header-tools">'+productivityLegend+'<nav aria-label="Navegação do calendário"><button type="button" data-cg-month="-1" aria-label="Mês anterior">←</button><button type="button" data-cg-month="1" aria-label="Próximo mês">→</button></nav></div></header><p class="cg-production-notice">Consultando quantidade de aves…</p><div class="cg-production-months"></div></article><article class="card pcp-report-panel cg-production-detail" hidden aria-live="polite" aria-atomic="true"></article><article class="card pcp-report-panel"><header><h2>Acumulado mensal</h2>'+productivityLegend+'</header></article>';
   content.prepend(root);
@@ -443,7 +445,8 @@ window.PcpCirurgico=(()=>{
      const rows=displayRows(allowed?dayHeads(date):[]),summary=rows.map(row=>row.empresa+': '+(row.quantidade_cabecas==null?'aves sem registro':formatHeads(row.quantidade_cabecas)+' '+birdUnit(row.quantidade_cabecas))+(row.peso_vivo==null?'':', peso vivo '+formatHeads(row.peso_vivo)+' kg')).join('; ');
      const bothEmpty=state.status==='ready'&&['10','111'].every(code=>(state.rows.find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??0)===0);
      const classes=[outside?'cg-production-adjacent':'',bothEmpty?'cg-production-rest':''].filter(Boolean).join(' ');
-     return '<td data-cg-label="'+esc(weekdays[new Date(date+'T00:00:00Z').getUTCDay()])+'"'+(classes?' class="'+classes+'"':'')+'><button type="button" data-cg-day="'+date+'" aria-pressed="false" aria-label="'+esc(day+' de '+(outside?monthName(Number(date.slice(0,4)),Number(date.slice(5,7))):label)+' · '+(allowed?(summary||emptyMessage(date)):'Fora do filtro de dia'))+'"'+(allowed?'':' disabled')+'>'+productivityDayHeader(day,date,outside,rows.length>1?[]:rows)+headsMarkup(rows,rows.length>1)+'</button></td>';
+     const enabled=allowed&&(!onDaySelect||!state.limit||date<=state.limit);
+     return '<td data-cg-label="'+esc(weekdays[new Date(date+'T00:00:00Z').getUTCDay()])+'"'+(classes?' class="'+classes+'"':'')+'><button type="button" data-cg-day="'+date+'" aria-pressed="false" aria-label="'+esc(day+' de '+(outside?monthName(Number(date.slice(0,4)),Number(date.slice(5,7))):label)+' · '+(allowed?(summary||emptyMessage(date)):'Fora do filtro de dia'))+'"'+(enabled?'':' disabled')+'>'+productivityDayHeader(day,date,outside,rows.length>1?[]:rows)+headsMarkup(rows,rows.length>1)+'</button></td>';
     });
     const weeks=Array.from({length:dates.length/7},(_,week)=>{
      const monday=new Date(Date.UTC(year,month-1,2-new Date(Date.UTC(year,month-1,1)).getUTCDay()+week*7)).toISOString().slice(0,10),number=productionWeek(monday);
@@ -458,7 +461,7 @@ window.PcpCirurgico=(()=>{
   }
   root.addEventListener('click',event=>{
    const day=event.target.closest('[data-cg-day]');
-   if(day&&!day.disabled){selectedDay=selectedDay===day.dataset.cgDay?'':day.dataset.cgDay;renderDetail();return;}
+   if(day&&!day.disabled){if(onDaySelect){onDaySelect(day.dataset.cgDay);return;}selectedDay=selectedDay===day.dataset.cgDay?'':day.dataset.cgDay;renderDetail();return;}
    const arrow=event.target.closest('[data-cg-month]');
    if(arrow&&!arrow.disabled){const target=targetMonth(Number(arrow.dataset.cgMonth));if(target){selectedDay='';onNavigate(target);}}
   });
@@ -586,10 +589,10 @@ window.PcpCirurgico=(()=>{
   const yieldPanels=[...content.children];
   const productivity=createProductivityCalendar(content,fields,({year,month})=>{
    fields.Ano.value=String(year);fields.Mes.value=String(month);fields.Dia.value='';load();
-  },()=>loading,()=>headsState);
+  },()=>loading,()=>headsState,date=>openYieldForDay(date));
   const monthly=createProductivityMonthly(productivity.monthlyHost,fields,()=>monthlyState);
-  let indicatorMode='rendimento';
-  const indicatorFlags=PcpPeriodFlags.create('cgTipoIndicador',indicatorMode,mode=>{
+  let indicatorMode='rendimento',yieldDayFilter=null;
+  function selectIndicatorMode(mode,selection=null){
    indicatorMode=mode;
    filter.classList.toggle('cg-productivity-filters',mode==='produtividade');
    filter.classList.toggle('cg-yield-filters',mode==='rendimento');
@@ -597,13 +600,26 @@ window.PcpCirurgico=(()=>{
    const monthChanged=monthFilter.sync(mode);
    unitFilter.sync(mode);
    groupFilter.sync(mode);
+   if(selection){
+    fields.Ano.value=selection.date.slice(0,4);fields.Mes.value=String(Number(selection.date.slice(5,7)));
+    fields.Unidade.value=selection.units;fields.Grupo.value='';fields.Dia.value=selection.date;
+    yieldDayFilter=selection.date;
+   }
    if(mode==='produtividade'&&monthChanged)fields.Dia.value='';
    for(const panel of yieldPanels)panel.hidden=mode==='produtividade';
    indicatorWeekFilter.hidden=mode!=='produtividade';
    productivity.root.hidden=mode!=='produtividade';productivity.render();
    if(mode==='rendimento'){load();requestAnimationFrame(scrollTablesToLatest);}
    else{if(monthChanged)load();else{refreshHeads(true);refreshMonthly(true);}monthly.resetPosition();}
-  },[['rendimento','Rendimento'],['produtividade','Produtividade']]);
+  }
+  const indicatorFlags=PcpPeriodFlags.create('cgTipoIndicador',indicatorMode,selectIndicatorMode,[['rendimento','Rendimento'],['produtividade','Produtividade']]);
+  function openYieldForDay(date){
+   const selection={date,units:productivitySelection(fields.Unidade.value).join(',')||'10'};
+   indicatorFlags.dataset.selection='rendimento';
+   for(const radio of indicatorFlags.querySelectorAll('input'))radio.checked=radio.value==='rendimento';
+   selectIndicatorMode('rendimento',selection);
+   filter.scrollIntoView({block:'start'});
+  }
   indicatorFlags.setAttribute('aria-label','Tipo de indicador');
   indicatorFlags.querySelector('legend').textContent='Tipo de indicador';
   const indicatorToolbar=document.createElement('div');
@@ -737,18 +753,22 @@ window.PcpCirurgico=(()=>{
   async function load(){
    monthFilter.sync(indicatorMode);
    unitFilter.sync(indicatorMode);
+   const requestedDay=indicatorMode==='rendimento'?yieldDayFilter:null;
    const id=++generation;if(controller)controller.abort();controller=new AbortController();loading=true;
    refreshHeads(true);
    refreshMonthly();
    productivity.render();
    try{const result=await apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:fields.Ano.value||[...fields.Ano.options].map(o=>o.value).join(','),mes:fields.Mes.value||Array.from({length:12},(_,i)=>i+1).join(',')},{silent:true,signal:controller.signal});if(id!==generation)return;if(!result.ok)throw new Error('Consulta não concluída');data=result;
-    fields.Ano.innerHTML=result.anos.map(y=>'<option value="'+y+'">'+y+'</option>').join('');fields.Ano.value=result.ano;fields.Mes.value=result.mes;const day=fields.Dia.value;fields.Dia.innerHTML='<option value="">Todos</option>'+result.dias.map(d=>'<option value="'+d.data+'">'+d.data.split('-').reverse().join('/')+'</option>').join('');fields.Dia.value=PcpMulti.values(day).filter(v=>result.dias.some(d=>d.data===v)).join(',');
+    fields.Ano.innerHTML=result.anos.map(y=>'<option value="'+y+'">'+y+'</option>').join('');fields.Ano.value=result.ano;fields.Mes.value=result.mes;const day=fields.Dia.value;fields.Dia.innerHTML='<option value="">Todos</option>'+result.dias.map(d=>'<option value="'+d.data+'">'+d.data.split('-').reverse().join('/')+'</option>').join('');
+    const keepDay=requestedDay&&PcpMulti.values(day).includes(requestedDay)&&requestedDay<=result.data_limite?requestedDay:null;
+    if(keepDay&&!result.dias.some(d=>d.data===keepDay))fields.Dia.innerHTML+='<option value="'+keepDay+'">'+keepDay.split('-').reverse().join('/')+'</option>';
+    fields.Dia.value=PcpMulti.values(day).filter(v=>result.dias.some(d=>d.data===v)||v===keepDay).join(',');
     render();PcpReportHeader.update(result.ultima_atualizacao);document.getElementById('mensagemErro').classList.add('hidden');document.getElementById('estadoConsulta').textContent='Dados reais · até '+result.data_limite.split('-').reverse().join('/')+' (D−1)';
    }catch(e){if(id!==generation||e.name==='AbortError')return;if(e.status===401||e.status===403){data=null;lineChart?.clear();if(dialog.open)dialog.close();document.getElementById('cgDiario').replaceChildren();document.getElementById('cgMensal').replaceChildren();}const error=document.getElementById('mensagemErro');error.textContent='Não foi possível atualizar o comparativo. '+(data?'A última consulta permanece visível.':'');error.classList.remove('hidden');}
    finally{if(id===generation){loading=false;productivity.render();}}
   }
   document.getElementById('cgAtualizar').onclick=load;
-  fields.Ano.onchange=fields.Mes.onchange=()=>{fields.Dia.value='';load();};fields.Dia.onchange=fields.Unidade.onchange=fields.Grupo.onchange=render;document.getElementById('cgLimpar').onclick=()=>{fields.Grupo.value=fields.Unidade.value=fields.Dia.value='';fields.Ano.value=now.getFullYear();fields.Mes.value=now.getMonth()+1;if(indicatorMode==='produtividade'){fields.Unidade.value='10';fields.SemanaCheia.checked=false;monthly.resetPosition();}load();};
+  fields.Ano.onchange=fields.Mes.onchange=()=>{yieldDayFilter=null;fields.Dia.value='';load();};fields.Dia.onchange=fields.Unidade.onchange=fields.Grupo.onchange=render;document.getElementById('cgLimpar').onclick=()=>{yieldDayFilter=null;fields.Grupo.value=fields.Unidade.value=fields.Dia.value='';fields.Ano.value=now.getFullYear();fields.Mes.value=now.getMonth()+1;if(indicatorMode==='produtividade'){fields.Unidade.value='10';fields.SemanaCheia.checked=false;monthly.resetPosition();}load();};
   function refreshAutomatically(){if(indicatorMode==='rendimento'&&!document.hidden&&!loading)load();}
   setInterval(refreshAutomatically,60000);document.addEventListener('visibilitychange',refreshAutomatically);PcpMulti.enhance(filter);monthFilter.sync(indicatorMode);unitFilter.sync(indicatorMode);load();
  }

@@ -36,7 +36,10 @@ window.pcpRendimentoSnapshot=()=>{
 };
 window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
- if(endpoint==='/api/pcp/comparativo/cirurgico-geral')return {ok:true,anos:[2025,2026],ano:2026,mes:Number(String(p.mes||11).split(',')[0]),data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883}],dias:['2026-11-02','2026-11-03'].map(data=>({data,valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}})),mensal:[{mes:'2026-11',valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}}],semanal:[]};
+ if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
+  const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
+  return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}})),mensal:[{mes:prefix,valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}}],semanal:[]};
+ }
  if(endpoint==='/api/pcp/tabelas')return {ok:true,tabelas:['diario_industria','diario_industria_turnos'].map(tabela=>({tabela,colunas:['data_referencia','empresa','empresa_codigo','unidade_codigo','turno_codigo','secao','descricao','quantidade']}))};
  const tabela=endpoint.split('/').pop();
  const rows=tabela==='metas'?fixture.metas.filter(r=>r.referencia_mes>=p.inicio&&r.referencia_mes<=p.fim&&r.tela===p.tela&&r.ativo):
@@ -75,14 +78,17 @@ TEST = r'''
    }
   }
   checkRendimentoHeader();
+  assert(document.getElementById('cgDiario').closest('article').querySelector('[data-indicator-formula]'),'Fórmulas mantidas no diário de Rendimento');
+  assert(document.getElementById('cgMensal').closest('article').querySelector('[data-indicator-formula]'),'Fórmulas mantidas no mensal de Rendimento');
   flag('produtividade').click();await flush();
+  assert(!document.querySelector('#cgProdutividade [data-indicator-formula]'),'Nenhum botão de fórmula na Produtividade');
   assert(document.getElementById('cgAtualizar').hidden&&getComputedStyle(document.getElementById('cgAtualizar')).display==='none','Atualizar oculto em Produtividade');
   const countComparativo=()=>pcpTestCalls.filter(call=>call.endpoint==='/api/pcp/comparativo/cirurgico-geral').length;
   const callsBeforeTimer=countComparativo();for(const timer of pcpTestIntervals)timer.callback();await flush();
   assert(countComparativo()===callsBeforeTimer,'Produtividade não atualiza automaticamente');
   assert(JSON.stringify([...unit.options].map(o=>o.textContent))===JSON.stringify(['Ave Nova','1° Turno - AN','2° Turno - AN','Real Alimentos']),'Quatro opções com nomes e ordem exatos');
   assert(unit.closest('label').firstChild.textContent==='Unidade / Turno','Nome do filtro único');
-  const expected={'10':[222318],'1':[113244],'2':[109074],'111':[142587],'10,111':[364905],'1,111':[255831],'2,111':[251661]};
+  const expected={'10':[222318],'1':[113244],'2':[109074],'111':[142587],'10,111':[364905]};
   assert(document.getElementById('cgGrupo').closest('label').hidden,'Grupo oculto somente em Produtividade');
   assert([...document.querySelectorAll('.cg-production-grid tbody [data-cg-week]')].map(cell=>cell.dataset.cgWeek).join(',')==='2026-W45,2026-W46,2026-W47,2026-W48,2026-W49','Semanas ISO nas linhas do calendário');
   const parse=element=>Number(element.textContent.replace(/[^\d-]/g,''));
@@ -146,12 +152,6 @@ TEST = r'''
     assert(parse(day3.querySelector('.cg-prod-reference>span:first-child>span:last-child'))===200000,'Somar metas por dia');
     assert(parse(day3.querySelector('.cg-prod-reference strong'))===-10523,'Somar diferença positiva e negativa sem perder sinais');
     assert(parse(day3.querySelector('.cg-production-day-weight strong'))===589555,'Somar pesos por dia');
-    day3.click();await flush();
-    const detail=document.querySelector('.cg-production-detail');
-    assert(!detail.hidden&&detail.querySelectorAll('dl>div').length===1,'Detalhamento também consolidado');
-    assert(parse(detail.querySelector('dd>strong'))===189477,'Aves no detalhamento');
-    assert(parse(detail.querySelector('.cg-prod-reference strong'))===-10523,'Diferença no detalhamento');
-    day3.click();await flush();
    }
    results.push({unit:value,...checkLayout(value)});
   }
@@ -167,6 +167,11 @@ TEST = r'''
   menu.querySelector('input[value="1"]').click();await flush();assert(unit.value==='1','Primeiro turno isolado');
   menu.querySelector('input[value="2"]').click();await flush();assert(unit.value==='10','Dois turnos se tornam Ave Nova total');
   assert(menu.querySelector('input[value="10"]').checked&&!menu.querySelector('input[value="1"]').checked&&!menu.querySelector('input[value="2"]').checked,'Checkboxes refletem normalização');
+  menu.querySelector('input[value="111"]').click();await flush();assert(unit.value==='10,111','Ave Nova total combina com Real');
+  menu.querySelector('input[value="1"]').click();await flush();assert(unit.value==='1'&&!menu.querySelector('input[value="111"]').checked,'Primeiro turno cancela Real');
+  menu.querySelector('input[value="111"]').click();await flush();assert(unit.value==='111'&&!menu.querySelector('input[value="1"]').checked,'Real cancela primeiro turno');
+  menu.querySelector('input[value="2"]').click();await flush();assert(unit.value==='2'&&!menu.querySelector('input[value="111"]').checked,'Segundo turno cancela Real');
+  menu.querySelector('input[value="111"]').click();await flush();assert(unit.value==='111'&&!menu.querySelector('input[value="2"]').checked,'Real cancela segundo turno');
   menu.querySelector('button').click();
   document.getElementById('cgSemanaCheia').click();await flush();assert(document.getElementById('cgSemanaCheia').checked,'Semana cheia');
   document.querySelector('[data-cg-month="1"]').click();await flush();assert(document.getElementById('cgMes').value==='12','Seta sincroniza mês');
@@ -183,7 +188,42 @@ TEST = r'''
   checkRendimentoHeader();
   const callsBeforeUpdate=countComparativo();document.getElementById('cgAtualizar').click();await flush();assert(countComparativo()===callsBeforeUpdate+1,'Atualizar original consulta o Rendimento');
   const callsBeforeAuto=countComparativo();for(const timer of pcpTestIntervals)timer.callback();await flush();assert(countComparativo()===callsBeforeAuto+1,'Atualização automática de Rendimento preservada');
+  // Clique no dia transfere o contexto atual em vez de restaurar os filtros antigos.
+  for(const value of Object.keys(expected)){
+   document.getElementById('cgGrupo').value='familias';
+   document.getElementById('cgMes').value='1,2';
+   flag('produtividade').click();await flush();
+   document.getElementById('cgMes').value='10';document.getElementById('cgMes').dispatchEvent(new Event('change',{bubbles:true}));await flush();
+   unit.value=value;unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+   assert(!document.querySelector('#cgProdutividade [data-indicator-formula]'),'Fórmulas continuam ausentes depois de atualizar');
+   document.querySelector('[data-cg-day="2026-10-05"]').click();await flush();
+   assert(flag('rendimento').checked&&!flag('produtividade').checked,'Clique seleciona a flag Rendimento');
+   assert(document.getElementById('cgProdutividade').hidden,'Calendário oculto após navegar');
+   assert(document.getElementById('cgAno').value==='2026'&&document.getElementById('cgMes').value==='10'&&day.value==='2026-10-05','Ano, mês e dia preservados');
+   assert(unit.value===value,'Unidade ou turno preservado ao navegar: '+value);
+   assert(document.getElementById('cgGrupo').value==='','Não restaura Grupo antigo incompatível');
+   assert(document.getElementById('cgDiario').querySelector('thead').textContent.includes('05/10/2026'),'Rendimento apresenta o dia clicado');
+   const columnLabels=[...document.getElementById('cgDiario').querySelectorAll('thead tr:last-child th')].map(cell=>cell.textContent);
+   assert(columnLabels.length===value.split(',').length,'Rendimento mantém apenas as unidades selecionadas');
+   assert(document.getElementById('cgDiario').closest('article').querySelector('[data-indicator-formula]'),'Fórmulas continuam em Rendimento após navegação');
+  }
+  // Um dia sem linha retornada pelo Rendimento continua sendo um filtro explícito.
+  flag('produtividade').click();await flush();
+  day.value='';day.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  document.querySelector('[data-cg-day="2026-10-06"]').click();await flush();
+  assert(day.value==='2026-10-06'&&!document.getElementById('cgDiario').querySelector('table'),'Dia sem dados não amplia para o mês todo');
+  for(const timer of pcpTestIntervals)timer.callback();await flush();
+  assert(day.value==='2026-10-06'&&!document.getElementById('cgDiario').querySelector('table'),'Atualização automática mantém o dia vazio selecionado');
+  // Semana cheia: clicar no mês vizinho transfere também mês e ano.
+  flag('produtividade').click();await flush();
+  document.getElementById('cgMes').value='1';document.getElementById('cgMes').dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  if(!document.getElementById('cgSemanaCheia').checked){document.getElementById('cgSemanaCheia').click();await flush();}
+  unit.value='1';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  document.querySelector('[data-cg-day="2025-12-29"]').click();await flush();
+  assert(document.getElementById('cgAno').value==='2025'&&document.getElementById('cgMes').value==='12'&&day.value==='2025-12-29'&&unit.value==='1','Dia do ano vizinho navega com seus filtros');
+  document.getElementById('cgAno').value='2026';document.getElementById('cgMes').value='11';document.getElementById('cgMes').dispatchEvent(new Event('change',{bubbles:true}));await flush();
   flag('produtividade').click();await flush();unit.value='10,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  const future=document.querySelector('[data-cg-day="2026-11-05"]');assert(future.disabled,'D−1 não permite navegar para dados futuros');
   if(new URLSearchParams(location.search).has('monthly')){const style=document.createElement('style');style.textContent='.page-header,.filter-card,#estadoConsulta,#cgProdutividade>article:first-child{display:none!important}';document.head.append(style);const box=document.querySelector('.cg-monthly-scroll');box.scrollTop=box.scrollHeight;window.scrollTo(0,0);await flush();}
   if(new URLSearchParams(location.search).has('rendimento')){flag('rendimento').click();await flush();checkRendimentoHeader();}
   assert(!errors.length,'Erros JS: '+errors.join('; '));
@@ -209,11 +249,11 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     fixture = json.loads((ROOT / 'tools/fixtures/produtividade-novembro-2026.json').read_text(encoding='utf-8'))
     page = '''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="/assets/css/app.css"><link rel="stylesheet" href="/assets/vendor/geist/index.css"><link rel="stylesheet" href="/assets/css/pcp.css"></head>
+<link rel="stylesheet" href="/assets/css/app.css"><link rel="stylesheet" href="/assets/vendor/geist/index.css"><link rel="stylesheet" href="/assets/css/pcp.css"><link rel="stylesheet" href="/assets/css/indicator-formulas.css"></head>
 <body class="pcp-report"><div class="app-shell"><header class="page-header"><div><h1>Comparativo x Cirúrgico Geral</h1><p></p></div><div class="header-toolbar"></div></header>
 <section class="card filter-card"></section><div id="mensagemErro" class="hidden"></div><p id="estadoConsulta"></p><main id="pcpConteudo"></main></div><pre id="test-result" hidden>PENDING</pre>
 <script src="/assets/js/config.js"></script><script>__SCRIPT__</script><script src="/assets/js/filters.js"></script><script src="/assets/js/pcp-multiselect.js"></script>
-<script src="/assets/js/pcp-report-model.js"></script><script src="/assets/js/pcp-cirurgico.js"></script><script src="/assets/js/pcp-report.js"></script><script>__TEST__</script></body></html>'''
+<script src="/assets/js/pcp-report-model.js"></script><script src="/assets/js/pcp-cirurgico.js"></script><script src="/assets/js/pcp-report.js"></script><script src="/assets/js/indicator-formulas-data.js"></script><script src="/assets/js/indicator-formulas.js"></script><script>__TEST__</script></body></html>'''
     page = page.replace('__SCRIPT__', SCRIPT.replace('__FIXTURE__', json.dumps(fixture, ensure_ascii=False))).replace('__TEST__', TEST)
     (OUT / 'preview.html').write_text(page, encoding='utf-8')
     handler = functools.partial(QuietHandler, directory=str(ROOT))

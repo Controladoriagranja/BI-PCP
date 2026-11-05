@@ -2,6 +2,571 @@
 window.PcpCirurgico=(()=>{
  const esc=ApiScreen.escape,pct=v=>v==null?'—':(v*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
  const cols={'1':'1º turno - AN','2':'2º turno - AN','10':'Ave Nova - AN','111':'Real Alimentos'};
+ const headCompanies={'10':'Ave Nova','111':'Real Alimentos'};
+ const headCompanyLabels={'10':'A.N.','111':'R.A.','both':'A.N. + R.A.'};
+ const combinedCompanyLabel='Real Alimentos + Ave Nova';
+ const productivityUnitOptions=[
+  ['10','Ave Nova',['10'],null],['1','1° Turno - AN',['10'],'1'],['2','2° Turno - AN',['10'],'2'],
+  ['111','Real Alimentos',['111'],null]
+ ];
+ function productivitySelection(units){
+  const selected=new Set(PcpMulti.values(units).flatMap(value=>value==='both'?['10','111']:[value]));
+  if(selected.has('10')||(selected.has('1')&&selected.has('2'))){selected.add('10');selected.delete('1');selected.delete('2');}
+  return productivityUnitOptions.map(option=>option[0]).filter(value=>selected.has(value));
+ }
+ function headCompany(value){
+  const text=String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  if(/^(?:0*10|an)$/.test(text)||/\bave ?nova\b/.test(text))return '10';
+  if(/^(?:0*111|ra|real)$/.test(text)||/\breal alimentos\b/.test(text))return '111';
+  return null;
+ }
+ function selectedHeadCompanies(units){
+  const selected=productivitySelection(units);
+  const option=selected.length===1&&productivityUnitOptions.find(option=>option[0]===selected[0]);
+  if(option)return option[2];
+  return ['10','111'].filter(code=>!selected.length||selected.includes(code)||(code==='10'&&selected.some(v=>v==='1'||v==='2')));
+ }
+ function selectedHeadTurns(units,company){
+  const selected=productivitySelection(units),option=selected.length===1&&productivityUnitOptions.find(option=>option[0]===selected[0]);
+  if(option)return option[3]?[option[3]]:company==='10'?['1','2']:null;
+  return company==='10'?(!selected.length||selected.includes('10')?['1','2']:selected.filter(v=>v==='1'||v==='2')):null;
+ }
+ function productivityTurnNotice(units,rows=[],weights=[]){
+  if(!selectedHeadCompanies(units).includes('111')||!selectedHeadTurns(units,'111'))return '';
+  const available=[...rows,...weights].some(row=>row.empresa_codigo==='111');
+  return (available?'':'Real Alimentos: sem registros identificados para este turno; o consolidado não substitui os turnos. ')+
+   'Real Alimentos: a fonte de metas disponível não separa turnos; Meta e Diferença ficam sem referência nesta seleção.';
+ }
+ function productionMonth(year,month,fullWeek=false){
+  const offset=new Date(Date.UTC(year,month-1,1)).getUTCDay(),count=new Date(Date.UTC(year,month,0)).getUTCDate();
+  const dates=Array.from({length:Math.ceil((offset+count)/7)*7},(_,index)=>{
+   const day=index-offset+1;
+   return !fullWeek&&(day<1||day>count)?null:new Date(Date.UTC(year,month-1,day)).toISOString().slice(0,10);
+  });
+  const visible=dates.filter(Boolean);
+  return {dates,inicio:visible[0],fim:visible[visible.length-1]};
+ }
+ // Fonte bruta já publicada. Nenhum indicador ou peso de Rendimento participa desta seleção.
+ const productivityHeads=(()=>{
+  // Cada carga compartilha só o catálogo; dados e respostas não persistem entre cargas.
+  const catalogs=new WeakMap();
+  function catalogFor(get,signal){
+   let requests=catalogs.get(get);
+   if(!requests){requests=new WeakMap();catalogs.set(get,requests);}
+   let pending=requests.get(signal);
+   if(!pending){
+    pending=Promise.resolve().then(()=>get(APP_CONFIG.endpoints.modelo,{}, {silent:true,signal}));
+    requests.set(signal,pending);
+    pending.catch(()=>{if(requests.get(signal)===pending)requests.delete(signal);});
+   }
+   return pending;
+  }
+  function schema(catalog,table){
+   const entry=catalog.tabelas?.find(t=>t.tabela===table);
+   if(!entry)throw Error('Fonte de Cabeças não disponível no catálogo PCP.');
+   const columns=Array.isArray(entry.colunas)?entry.colunas.map(c=>typeof c==='string'?c:c.nome):Object.keys(entry.colunas||{});
+   const original=name=>{
+    const matches=(entry.mapeamento||[]).filter(m=>String(m.nome_original).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()===name);
+    const column=matches.length===1?matches[0].coluna:name;
+    if(matches.length>1||!columns.includes(column))throw Error('Colunas de Cabeças não confirmadas pelo catálogo PCP.');
+    return column;
+   };
+   const description=original('descricao'),quantity=original('quantidade');
+   if(!columns.includes('data_referencia')||!columns.includes('empresa_codigo'))throw Error('Data ou empresa não confirmada no catálogo PCP.');
+   if(table==='diario_industria_turnos'&&!columns.includes('turno_codigo'))throw Error('Turno não confirmado no catálogo PCP.');
+   const hasSection=columns.includes('secao')||(entry.mapeamento||[]).some(m=>String(m.nome_original).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()==='secao');
+   const section=table==='diario_industria_turnos'||hasSection?original('secao'):null;
+   return {description,quantity,section,turn:columns.includes('turno_codigo')?'turno_codigo':null,date:'data_referencia',company:'empresa_codigo',name:columns.includes('empresa')?'empresa':null};
+  }
+  function civilDate(value){
+   const match=/^(\d{4}-\d{2}-\d{2})(?:$|[T ])/.exec(String(value??''));
+   if(!match)return null;
+   const parsed=new Date(match[1]+'T00:00:00Z');
+   return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===match[1]?match[1]:null;
+  }
+  function quantity(value){
+   if(typeof value==='number')return Number.isFinite(value)?value:null;
+   if(typeof value!=='string'||!/^[-+]?\d+(?:\.\d+)?$/.test(value.trim()))return null;
+   const number=Number(value);return Number.isFinite(number)?number:null;
+  }
+  function collect(target,priorities,rows,columns,params){
+   for(const row of rows){
+    if(row[columns.description]!==params.metricDescription)continue;
+    // Empresa é o nome original do relatório; empresa_codigo é metadado da importação.
+    const company=headCompany(columns.name&&row[columns.name])||headCompany(row[columns.company]);
+    const date=civilDate(row[columns.date]),value=quantity(row[columns.quantity]);
+    if(!date||!company||value===null||date<params.inicio||date>params.fim)continue;
+    if(params.empresas&&!params.empresas.includes(company))continue;
+    if(params.turno&&String(row.turno_codigo)!==params.turno)continue;
+    const key=company+'|'+date,previous=target.get(key),name=headCompanies[company],field=params.weight?'peso_vivo':'quantidade_cabecas';
+    const section=columns.section?row[columns.section]:null;
+    const priority=params.weight?0:section==='Abate - Total'?0:section==='Recepção de Aves Vivas'?1:2;
+    if(!params.weight&&priority===2)continue;
+    const selectionKey=key+(params.somarTurno?'|'+params.turno:''),previousPriority=priorities.get(selectionKey)??Infinity;
+    if(priority>previousPriority)continue;
+    if(params.somarTurno){
+     const turnos={...(previous?.turnos||{})};
+     // Cabeças: Abate primeiro, depois Recepção; MAX dentro da seção escolhida.
+     // Peso mantém MAX sem prioridade. Nunca somar seções do mesmo turno.
+     turnos[params.turno]=priority<previousPriority?value:Math.max(turnos[params.turno]??-Infinity,value);
+     const total=Object.values(turnos).reduce((sum,number)=>sum+number,0);
+     target.set(key,{data:date,empresa_codigo:company,empresa:name,[field]:total,turnos});
+    }else if(!previous||priority<previousPriority||value>previous[field]||(value===previous[field]&&name<previous.empresa)){
+     // A prioridade também vale no diário comum, sem somar seções.
+     target.set(key,{data:date,empresa_codigo:company,empresa:name,[field]:value});
+    }
+    priorities.set(selectionKey,priority);
+   }
+  }
+  function scopes(units,catalog,totalSource){
+   const companies=selectedHeadCompanies(units),anTurns=selectedHeadTurns(units,'10'),raTurns=selectedHeadTurns(units,'111');
+   const result=[];
+   const aveNova=companies.includes('10'),real=companies.includes('111')&&!raTurns;
+   const commonAveNova=aveNova&&totalSource==='diario'&&anTurns.length===2;
+   if(aveNova&&!commonAveNova){
+    schema(catalog,'diario_industria_turnos');
+    for(const turno of anTurns)result.push({table:'diario_industria_turnos',empresas:['10'],turno,somarTurno:totalSource!=='diario'});
+   }
+   if(companies.includes('111')&&raTurns){
+    for(const table of ['diario_industria_turnos','diario_industria','dados_gerais']){
+     if(!catalog.tabelas.some(t=>t.tabela===table))continue;
+     let columns;try{columns=schema(catalog,table);}catch(e){if(table==='diario_industria_turnos')throw e;continue;}
+     if(!columns.turn)continue;
+     for(const turno of raTurns)result.push({table,empresas:['111'],turno,somarTurno:totalSource!=='diario'});
+    }
+   }
+   // Os relatórios diários podem estar separados entre Diário da indústria e Dados gerais.
+   // Uma fonte complementar só é usada se o catálogo confirmar as mesmas colunas.
+   if(real||commonAveNova){
+    const companies=[...(commonAveNova?['10']:[]),...(real?['111']:[])];
+    const realStart=result.length;
+    const daily=catalog.tabelas.some(t=>t.tabela==='diario_industria');
+    if(commonAveNova&&!daily)throw Error('Diário comum da Ave Nova não disponível no catálogo PCP.');
+    if(daily){schema(catalog,'diario_industria');result.push({table:'diario_industria',empresas:companies});}
+    if(real&&catalog.tabelas.some(t=>t.tabela==='dados_gerais')){
+     try{schema(catalog,'dados_gerais');result.push({table:'dados_gerais',empresas:['111']});}catch(e){if(!daily)throw e;}
+    }
+    if(result.length===realStart)throw Error('Fonte diária de Cabeças não disponível no catálogo PCP.');
+   }
+   return result;
+  }
+  async function load(get,periods,units,signal,fullWeek=false,dateLimit,totalSource='turnos',metricDescription='Cabeças'){
+   const limit=civilDate(dateLimit);
+   if(!limit)throw Error('Data limite D−1 não confirmada pela consulta do relatório.');
+   const ranges=[];
+   for(const range of periods.map(({year,month})=>productionMonth(year,month,fullWeek)).filter(range=>range.inicio<=limit).map(range=>({...range,fim:range.fim<limit?range.fim:limit})).sort((a,b)=>a.inicio.localeCompare(b.inicio))){
+    const last=ranges[ranges.length-1];
+    const adjacent=last&&Date.parse(range.inicio+'T00:00:00Z')<=Date.parse(last.fim+'T00:00:00Z')+86400000;
+    if(adjacent)last.fim=last.fim>range.fim?last.fim:range.fim;else ranges.push({...range});
+   }
+   if(!ranges.length)return [];
+   const catalog=await catalogFor(get,signal);
+   if(!catalog.ok||!Array.isArray(catalog.tabelas))throw Error('Catálogo PCP indisponível.');
+   const target=new Map(),priorities=new Map();
+   for(const scope of scopes(units,catalog,totalSource)){
+    const columns=schema(catalog,scope.table),{table,empresas,turno,somarTurno}=scope;
+    for(const {inicio,fim} of ranges){
+     const weight=metricDescription==='Peso Vivo para Rendimento';
+     const params={...(turno?{turno}:{}),inicio,fim,[columns.description]:metricDescription};
+     let page=1,expectedTotal=null,received=0;
+     do{
+      if(signal.aborted)throw new DOMException('Consulta cancelada','AbortError');
+      const result=await get(APP_CONFIG.endpoints.tabelaModelo+encodeURIComponent(table),{...params,pagina:page,tamanho:1000},{silent:true,signal});
+      if(!result.ok||result.tabela!==table||!Array.isArray(result.dados)||!Number.isSafeInteger(result.total)||result.total<0||!Number.isSafeInteger(result.tamanho)||result.tamanho<1||result.pagina!==page)throw Error('Resposta de Cabeças incompleta.');
+      if(expectedTotal===null)expectedTotal=result.total;
+      if(result.total!==expectedTotal||result.dados.length>result.tamanho)throw Error('A fonte de Cabeças mudou durante a consulta. Atualize novamente.');
+      received+=result.dados.length;
+      if(received>expectedTotal||(received<expectedTotal&&result.dados.length!==result.tamanho))throw Error('Paginação de Cabeças incompleta.');
+      collect(target,priorities,result.dados,columns,{...params,empresas,somarTurno,weight,metricDescription});
+      if(received===expectedTotal)break;
+      page++;
+     }while(true);
+    }
+   }
+   return [...target.values()].sort((a,b)=>a.data.localeCompare(b.data)||a.empresa_codigo.localeCompare(b.empresa_codigo));
+  }
+  return {load};
+ })();
+ const productivityWeight={load:(get,periods,units,signal,fullWeek,limit,totalSource='turnos')=>productivityHeads.load(get,periods,units,signal,fullWeek,limit,totalSource,'Peso Vivo para Rendimento')};
+ const productivityTargets=(()=>{
+  const suffix=['','SEG','TER','QUA','QUI','SEX','SAB'];
+  const validCode=/^PROD_(AN_T1|AN_T2|RA)_(SEG|TER|QUA|QUI|SEX|SAB)$/;
+  async function load(get,periods,signal,fullWeek,limit){
+   const ranges=periods.map(({year,month})=>productionMonth(year,month,fullWeek)).filter(range=>range.inicio<=limit);
+   if(!ranges.length)return [];
+   // A API atual já expõe metas; seu campo de data é referencia_mes, sempre dia 1.
+   const first=ranges.map(r=>r.inicio).sort()[0],last=ranges.map(r=>r.fim).sort().pop();
+   const inicio=first.slice(0,7)+'-01',fim=(last<limit?last:limit).slice(0,7)+'-01',rows=[];
+   const tela='calendario_producao_produtividade';
+   let page=1,expectedTotal=null,received=0;
+   do{
+    if(signal.aborted)throw new DOMException('Consulta cancelada','AbortError');
+    const response=await get(APP_CONFIG.endpoints.tabelaModelo+'metas',{inicio,fim,tela,ativo:'true',pagina:page,tamanho:1000},{silent:true,signal});
+    if(!response.ok||response.tabela!=='metas'||!Array.isArray(response.dados)||!Number.isSafeInteger(response.total)||response.total<0||!Number.isSafeInteger(response.tamanho)||response.tamanho<1||response.pagina!==page)throw Error('Metas de Produtividade indisponíveis ou incompletas.');
+    if(expectedTotal===null)expectedTotal=response.total;
+    if(response.total!==expectedTotal||response.dados.length>response.tamanho)throw Error('Metas de Produtividade mudaram durante a consulta.');
+    received+=response.dados.length;
+    if(received>expectedTotal||(received<expectedTotal&&response.dados.length!==response.tamanho))throw Error('Paginação de metas incompleta.');
+    rows.push(...response.dados);
+    if(received===expectedTotal)break;
+    page++;
+   }while(true);
+   const seen=new Set();
+   return rows.filter(row=>row.tela===tela&&row.ativo===true&&validCode.test(row.indicador_codigo)&&row.valor_meta!=null).map(row=>{
+    const value=Number(row.valor_meta),key=row.indicador_codigo+'|'+row.referencia_mes;
+    if(!/^\d{4}-\d{2}-01$/.test(row.referencia_mes)||Number(row.referencia_mes.slice(5,7))<1||Number(row.referencia_mes.slice(5,7))>12||!['number','string'].includes(typeof row.valor_meta)||String(row.valor_meta).trim()===''||!Number.isFinite(value)||value<0||row.comparacao!=='>='||row.unidade!=='aves'||seen.has(key))throw Error('Metas de Produtividade incompatíveis ou duplicadas.');
+    seen.add(key);return {...row,valor_meta:value};
+   }).filter(row=>row.referencia_mes>=inicio&&row.referencia_mes<=fim);
+  }
+  function grade(company,rows,metas=[],units=''){
+   const actual=rows.filter(row=>row.empresa_codigo===company&&row.quantidade_cabecas!=null&&Number.isFinite(row.quantidade_cabecas));
+   if(!actual.length)return {className:'',meta:null};
+   if(company==='111'&&selectedHeadTurns(units,company))return {className:'',meta:null};
+   const turns=selectedHeadTurns(units,'10');
+   const index=new Map(metas.filter(m=>m.ativo===true).map(m=>[m.indicador_codigo+'|'+m.referencia_mes,Number(m.valor_meta)]));
+   let meta=null;
+   for(const row of actual){
+    const day=suffix[new Date(row.data+'T00:00:00Z').getUTCDay()];if(!day)continue;
+    const month=row.data.slice(0,7)+'-01',prefix=company==='10'?'PROD_AN_':'PROD_RA_';
+    if(!metas.some(m=>m.ativo===true&&m.referencia_mes===month&&m.indicador_codigo.startsWith(prefix)))return {className:'',meta:null};
+    const codes=company==='10'?turns.map(turn=>'PROD_AN_T'+turn+'_'+day):['PROD_RA_'+day];
+    const values=codes.map(code=>index.get(code+'|'+month)).filter(value=>value!=null&&Number.isFinite(value));
+    if(values.length)meta=(meta??0)+values.reduce((sum,value)=>sum+value,0);
+   }
+   const realized=actual.reduce((sum,row)=>sum+row.quantidade_cabecas,0);
+   return {className:meta==null?'':realized>=meta?'cg-prod-good':'cg-prod-bad',meta};
+  }
+  return {load,grade};
+ })();
+ function productivityReferenceMarkup(value,rating){
+  const meta=Number.isFinite(rating.meta)?rating.meta:null,difference=Number.isFinite(value)&&meta!=null?value-meta:null;
+  const format=number=>number==null?'—':number.toLocaleString('pt-BR',{maximumFractionDigits:6});
+  return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+(difference!=null&&rating.className?' class="'+rating.className+'"':'')+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span></span>';
+ }
+ function productivityWeightMarkup(value){
+  return '<span class="cg-prod-weight" title="Peso Vivo para Rendimento"><span>Peso (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{maximumFractionDigits:6}):'—')+'</strong></span>';
+ }
+ const productivityLegend='<div class="cg-prod-legend" aria-label="Referências de produtividade"><span><i class="cg-prod-dot cg-prod-dot-good" aria-hidden="true"></i>Dentro da referência</span><span><i class="cg-prod-dot cg-prod-dot-bad" aria-hidden="true"></i>Fora da referência</span></div>';
+ function createProductivityMonthFilter(select,currentMonth=()=>new Intl.DateTimeFormat('en',{timeZone:'America/Sao_Paulo',month:'numeric'}).format(new Date())){
+  let active=false,savedMonths='',month='',boundHost=null;
+  const values=()=>PcpMulti.values(select.value).map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=12).map(String);
+  const choose=list=>list.length===1?list[0]:list.includes(currentMonth())?currentMonth():list.length?String(Math.max(...list.map(Number))):currentMonth();
+  function sync(mode){
+   const previous=select.value;
+   const multi=select.pcpMulti,host=multi?.controller.getState(multi.field).host;
+   if(host&&boundHost!==host){
+    boundHost=host;
+    host.addEventListener('change',event=>{
+     if(!active||!event.target.matches('input[type="checkbox"]'))return;
+     event.stopImmediatePropagation();
+     if(event.target.hasAttribute('data-all'))return;
+     const chosen=Number(event.target.value);
+     if(!Number.isInteger(chosen)||chosen<1||chosen>12)return;
+     month=String(chosen);select.value=month;select.dispatchEvent(new Event('change',{bubbles:true}));
+    },true);
+   }
+   if(mode==='produtividade'){
+    const selected=values();
+    if(!active){savedMonths=select.value;month=choose(selected);active=true;multi?.controller.closeAll();}
+    else if(selected.length===1)month=selected[0];
+    if(select.value!==month)select.value=month;
+   }else{
+    if(active){active=false;select.value=savedMonths;multi?.controller.closeAll();}
+   }
+   if(host){host.hidden=false;host.classList.toggle('cg-month-single',active);}
+   return previous!==select.value;
+  }
+  return {sync};
+ }
+ function createProductivityUnitFilter(select){
+  const allowed=productivityUnitOptions.map(option=>option[0]);
+  let active=false,savedUnits='',savedOptions='',unit='10',boundHost=null;
+  const label=select.closest?.('label'),labelText=label?.firstChild;
+  const originalLabel=labelText?.textContent;
+  function sync(mode){
+   const multi=select.pcpMulti,host=multi?.controller.getState(multi.field).host;
+   if(host&&boundHost!==host){
+    boundHost=host;
+    const originalSummary=multi.controller.summary;
+    if(typeof originalSummary==='function')multi.controller.summary=function(state){
+     const chosen=productivitySelection([...state.selected].join(','));
+     return active&&chosen.includes('10')&&chosen.includes('111')?combinedCompanyLabel:originalSummary.call(this,state);
+    };
+    host.addEventListener('change',event=>{
+     if(!active||!event.target.matches('input[type="checkbox"]'))return;
+     event.stopImmediatePropagation();
+     if(event.target.hasAttribute('data-all')||!allowed.includes(String(event.target.value)))return;
+     const value=String(event.target.value),chosen=new Set(productivitySelection(select.value));
+     if(event.target.checked){
+      chosen.add(value);
+      if(value==='10'){chosen.delete('1');chosen.delete('2');}
+      else if(value==='1'||value==='2')chosen.delete('10');
+     }else chosen.delete(value);
+     unit=productivitySelection([...chosen].join(',')).join(',')||'10';
+     select.value=unit;select.dispatchEvent(new Event('change',{bubbles:true}));
+    },true);
+   }
+   if(mode==='produtividade'){
+    if(!active){
+     savedUnits=select.value;savedOptions=select.innerHTML;active=true;
+     select.innerHTML=productivityUnitOptions.map(([value,label])=>'<option value="'+value+'">'+esc(label)+'</option>').join('');
+     if(labelText)labelText.textContent='Unidade / Turno';
+     select.value=unit;multi?.controller.closeAll();
+    }
+    else{
+     unit=productivitySelection(select.value).join(',')||'10';
+     if(select.value!==unit)select.value=unit;
+    }
+   }else if(active){active=false;select.innerHTML=savedOptions;if(labelText)labelText.textContent=originalLabel;select.value=savedUnits;multi?.controller.closeAll();}
+   if(host)host.classList.toggle('cg-unit-multiple',active);
+  }
+  return {sync};
+ }
+ function createProductivityGroupFilter(select){
+  const label=select.closest('label');let active=false,saved='';
+  return {sync(mode){
+   if(mode==='produtividade'){
+    if(!active){saved=select.value;active=true;}
+    select.value='';label.hidden=true;
+   }else if(active){active=false;select.value=saved;label.hidden=false;}
+  }};
+ }
+ function productionWeek(date){
+  const thursday=new Date(date+'T00:00:00Z');
+  thursday.setUTCDate(thursday.getUTCDate()+4-(thursday.getUTCDay()||7));
+  const year=thursday.getUTCFullYear();
+  return {year,week:Math.ceil(((thursday-new Date(Date.UTC(year,0,1)))/86400000+1)/7)};
+ }
+ // Nova modificação de 29/10/2026: peso ao lado do dia, sem alterar valores.
+ function productivityHeaderWeights(rows){
+  return rows.map(row=>'<span class="cg-production-day-weight" title="Peso Vivo para Rendimento · '+esc(row.empresa||'')+'"><span>'+(rows.length>1?esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+' · ':'')+'Peso (kg)</span><strong>'+esc(Number.isFinite(row.peso_vivo)?row.peso_vivo.toLocaleString('pt-BR',{maximumFractionDigits:6}):'—')+'</strong></span>').join('');
+ }
+ function productivityDayHeader(day,date,outside,rows){
+  const badge='<span class="cg-production-day-number">'+esc(String(day))+(outside?'<small>/'+esc(date.slice(5,7))+'</small>':'')+'</span>';
+  const weights=productivityHeaderWeights(rows);
+  return '<span class="cg-production-day-header">'+badge+(weights?'<span class="cg-production-day-weights">'+weights+'</span>':'')+'</span>';
+ }
+ function createProductivityCalendar(content,fields,onNavigate,isLoading,getHeads=()=>({status:'idle',rows:[]})){
+  const root=document.createElement('section');root.id='cgProdutividade';root.hidden=true;
+  root.innerHTML='<article class="card pcp-report-panel"><header class="cg-production-header"><h2>Calendário de Produção</h2><div class="cg-production-header-tools">'+productivityLegend+'<nav aria-label="Navegação do calendário"><button type="button" data-cg-month="-1" aria-label="Mês anterior">←</button><button type="button" data-cg-month="1" aria-label="Próximo mês">→</button></nav></div></header><p class="cg-production-notice">Consultando quantidade de aves…</p><div class="cg-production-months"></div></article><article class="card pcp-report-panel cg-production-detail" hidden aria-live="polite" aria-atomic="true"></article><article class="card pcp-report-panel"><header><h2>Acumulado mensal</h2>'+productivityLegend+'</header></article>';
+  content.prepend(root);
+  const monthsHost=root.querySelector('.cg-production-months'),detail=root.querySelector('.cg-production-detail');
+  const weekdays=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const monthName=(year,month)=>new Date(Date.UTC(year,month-1,1)).toLocaleDateString('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'});
+  let selectedDay='',visibleDays=new Set();
+  const formatHeads=value=>value==null?'—':value.toLocaleString('pt-BR',{maximumFractionDigits:6});
+  const birdUnit=value=>value===1?'ave':'aves';
+  const calendarUnit=()=>productivitySelection(fields.Unidade?.value).join(',')||'10';
+  const calendarUnitLabel=()=>calendarUnit()==='10,111'?combinedCompanyLabel:productivitySelection(calendarUnit()).map(value=>({'10':'Ave Nova','111':'Real Alimentos','1':'Ave Nova - 1º turno','2':'Ave Nova - 2º turno'}[value])).join(' + ');
+  function dayHeads(date){
+   if(getHeads().status!=='ready'||!getHeads().limit||date>getHeads().limit||!PcpMulti.includes(fields.Grupo?.value,'producao'))return [];
+   const companies=selectedHeadCompanies(calendarUnit()),rows=getHeads().rows.filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
+   const weights=(getHeads().pesos||[]).filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
+   if(!rows.length&&!weights.length)return [];
+   return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:null},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null}));
+  }
+  function headsMarkup(rows,showWeight=true){
+   rows=displayRows(rows);
+   return rows.length?'<span class="cg-production-heads">'+rows.map(row=>{
+    const rating=row._rating||productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit());
+    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+(showWeight?productivityWeightMarkup(row.peso_vivo):'')+'</span>';
+   }).join('')+'</span>':'<span class="cg-production-empty" aria-hidden="true">—</span>';
+  }
+  function totals(dates){
+   if(getHeads().status!=='ready'||!PcpMulti.includes(fields.Grupo?.value,'producao'))return [];
+   const daily=dates.filter(date=>date&&PcpMulti.includes(fields.Dia.value,date)).flatMap(dayHeads);
+   return selectedHeadCompanies(calendarUnit()).map(code=>{
+    const values=daily.filter(row=>row.empresa_codigo===code&&row.quantidade_cabecas!=null).map(row=>row.quantidade_cabecas);
+    const weights=daily.filter(row=>row.empresa_codigo===code&&row.peso_vivo!=null).map(row=>row.peso_vivo);
+    return {empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:values.length?values.reduce((sum,value)=>sum+value,0):null,peso_vivo:weights.length?weights.reduce((sum,value)=>sum+value,0):null,_days:daily.filter(row=>row.empresa_codigo===code)};
+   });
+  }
+  function totalCell(dates,kind,label){
+   const rows=displayRows(totals(dates)),weights=productivityHeaderWeights(rows);
+   return '<td class="cg-production-total" data-cg-total="'+kind+'" data-cg-label="'+esc(label)+'" aria-label="'+esc(label)+'">'+(weights&&rows.length===1?'<span class="cg-production-total-header">'+weights+'</span>':'')+headsMarkup(rows,rows.length>1)+'</td>';
+  }
+  function displayRows(rows){
+   if(selectedHeadCompanies(calendarUnit()).length<2||!rows.length||rows[0].empresa_codigo==='both')return rows;
+   const sum=field=>{const values=rows.map(row=>row[field]).filter(Number.isFinite);return values.length?values.reduce((total,value)=>total+value,0):null;};
+   const value=sum('quantidade_cabecas');
+   const ratings=rows.filter(row=>Number.isFinite(row.quantidade_cabecas)).map(row=>productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit()));
+   const meta=ratings.length&&ratings.every(rating=>Number.isFinite(rating.meta))?ratings.reduce((total,rating)=>total+rating.meta,0):null;
+   return [{empresa_codigo:'both',empresa:combinedCompanyLabel,quantidade_cabecas:value,peso_vivo:sum('peso_vivo'),_rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}}];
+  }
+  function emptyMessage(date){
+   if(date&&getHeads().limit&&date>getHeads().limit)return 'Dados disponíveis até '+getHeads().limit.split('-').reverse().join('/')+' (D−1).';
+   const status=getHeads().status;
+   return status==='loading'?'Consultando quantidade de aves…':status==='error'?'Não foi possível consultar Aves. Altere os filtros ou recarregue a página para tentar novamente.':status!=='ready'?'Quantidade de aves ainda não consultada.':!PcpMulti.includes(fields.Grupo?.value,'producao')?'Aves não pertencem ao grupo selecionado.':'Sem registros de Aves para esta data e filtros.';
+  }
+  function periods(){
+   const years=PcpMulti.values(fields.Ano.value),months=PcpMulti.values(fields.Mes.value);
+   const now=new Date(),yearNow=Number(now.toLocaleDateString('en',{timeZone:'America/Sao_Paulo',year:'numeric'})),monthNow=Number(now.toLocaleDateString('en',{timeZone:'America/Sao_Paulo',month:'numeric'}));
+   const available=(years.length?years:[...fields.Ano.options].map(o=>o.value)).map(Number).filter(year=>Number.isInteger(year)&&year>=1000&&year<=9999);
+   const selected=months.map(Number).filter(month=>Number.isInteger(month)&&month>=1&&month<=12);
+   if(!available.length)return [];
+   const year=available.includes(yearNow)?yearNow:Math.max(...available),month=selected.includes(monthNow)?monthNow:selected.length?Math.max(...selected):monthNow;
+   return [{year,month}];
+  }
+  function targetMonth(direction){
+   const list=periods();if(!list.length)return null;
+   const edge=direction<0?list[0]:list[list.length-1],date=new Date(Date.UTC(edge.year,edge.month-1+direction,1));
+   const year=date.getUTCFullYear(),month=date.getUTCMonth()+1;
+   return [...fields.Ano.options].some(o=>Number(o.value)===year)?{year,month}:null;
+  }
+  function renderDetail(){
+   detail.hidden=!selectedDay;
+   if(selectedDay){
+    const date=new Date(selectedDay+'T00:00:00Z').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}),rows=displayRows(dayHeads(selectedDay));
+    detail.innerHTML='<header><h2>Detalhamento do dia · '+esc(date)+'</h2></header>'+(rows.length?'<dl class="cg-production-heads-detail">'+rows.map(row=>{
+     const rating=row._rating||productivityTargets.grade(row.empresa_codigo,[row],getHeads().metas||[],calendarUnit());
+     return '<div><dt title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+' · Aves</dt><dd><strong'+(rating.className?' class="'+rating.className+'"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+'</strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+productivityWeightMarkup(row.peso_vivo)+'</dd></div>';
+    }).join('')+'</dl><p class="cg-production-notice">Valores de aves por empresa e dia, conforme os registros da fonte.</p>':'<p class="cg-production-notice">'+esc(emptyMessage(selectedDay))+'</p>');
+   }
+   for(const button of monthsHost.querySelectorAll('[data-cg-day]'))button.setAttribute('aria-pressed',String(button.dataset.cgDay===selectedDay));
+  }
+  function render(){
+   if(root.hidden)return;
+   const notice=root.querySelector('.cg-production-notice'),state=getHeads();
+   const limitation=state.status==='ready'?productivityTurnNotice(calendarUnit(),state.rows,state.pesos):'';
+   notice.hidden=state.status!=='loading'&&state.status!=='error'&&!limitation;
+   const missing=state.status==='ready'?selectedHeadCompanies(calendarUnit()).filter(code=>!state.rows.some(row=>row.empresa_codigo===code)).map(code=>headCompanies[code]):[];
+   const fullWeek=!!fields.SemanaCheia?.checked;
+   notice.textContent=(state.status==='ready'&&PcpMulti.includes(fields.Grupo?.value,'producao')?'Aves por empresa e dia.'+(missing.length?' '+missing.join(' e ')+': sem registros de Aves no período consultado.':''):emptyMessage())+(fullWeek?' Semana cheia: os totais incluem os dias dos meses vizinhos exibidos no calendário.':'');
+   if(limitation)notice.textContent=limitation;
+   visibleDays=new Set();
+   monthsHost.innerHTML=periods().map(({year,month})=>{
+    const key=year+'-'+String(month).padStart(2,'0'),label=monthName(year,month),{dates}=productionMonth(year,month,fullWeek);
+    const slots=dates.map(date=>{
+     if(!date)return '<td class="cg-production-outside" aria-hidden="true"></td>';
+     const day=Number(date.slice(8)),outside=date.slice(0,7)!==key,allowed=PcpMulti.includes(fields.Dia.value,date);
+     if(allowed)visibleDays.add(date);
+     const rows=displayRows(allowed?dayHeads(date):[]),summary=rows.map(row=>row.empresa+': '+(row.quantidade_cabecas==null?'aves sem registro':formatHeads(row.quantidade_cabecas)+' '+birdUnit(row.quantidade_cabecas))+(row.peso_vivo==null?'':', peso vivo '+formatHeads(row.peso_vivo)+' kg')).join('; ');
+     const bothEmpty=state.status==='ready'&&['10','111'].every(code=>(state.rows.find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??0)===0);
+     const classes=[outside?'cg-production-adjacent':'',bothEmpty?'cg-production-rest':''].filter(Boolean).join(' ');
+     return '<td data-cg-label="'+esc(weekdays[new Date(date+'T00:00:00Z').getUTCDay()])+'"'+(classes?' class="'+classes+'"':'')+'><button type="button" data-cg-day="'+date+'" aria-pressed="false" aria-label="'+esc(day+' de '+(outside?monthName(Number(date.slice(0,4)),Number(date.slice(5,7))):label)+' · '+(allowed?(summary||emptyMessage(date)):'Fora do filtro de dia'))+'"'+(allowed?'':' disabled')+'>'+productivityDayHeader(day,date,outside,rows.length>1?[]:rows)+headsMarkup(rows,rows.length>1)+'</button></td>';
+    });
+    const weeks=Array.from({length:dates.length/7},(_,week)=>{
+     const monday=new Date(Date.UTC(year,month-1,2-new Date(Date.UTC(year,month-1,1)).getUTCDay()+week*7)).toISOString().slice(0,10),number=productionWeek(monday);
+     return '<tr><th scope="row" class="cg-production-week-number" data-cg-week="'+number.year+'-W'+String(number.week).padStart(2,'0')+'"><span title="Semana '+number.week+' de '+number.year+'">'+String(number.week).padStart(2,'0')+'</span></th>'+slots.slice(week*7+1,week*7+7).join('')+totalCell(dates.slice(week*7,week*7+7),'week-'+week,'Total semanal')+'</tr>';
+    }).join('');
+    const footer=weekdays.slice(1).map((day,index)=>totalCell(dates.filter((date,i)=>i%7===index+1),'weekday-'+(index+1),'Total de '+day.toLowerCase())).join('')+totalCell(dates,'month',fullWeek?'Total do período':'Total do mês');
+    return '<div class="cg-production-month"><h3>'+esc(label.charAt(0).toUpperCase()+label.slice(1)+' - '+calendarUnitLabel())+'</h3><div class="cg-production-scroll"><table class="cg-production-grid"><caption class="cg-production-sr">Calendário de Produção · '+esc(label)+'</caption><colgroup><col class="cg-production-week-col">'+Array.from({length:7},()=>'<col>').join('')+'</colgroup><thead><tr><th scope="col" title="Semana do ano (ISO)">Sem.</th>'+weekdays.slice(1).map(day=>'<th scope="col"><abbr title="'+day+'">'+day.slice(0,3)+'</abbr></th>').join('')+'<th scope="col" title="Total da semana, incluindo os domingos do período.">Total semanal</th></tr></thead><tbody>'+weeks+'</tbody><tfoot><tr><th class="cg-production-week-number"><span class="cg-production-sr">Totais</span></th>'+footer+'</tr></tfoot></table></div></div>';
+   }).join('');
+   if(!visibleDays.has(selectedDay))selectedDay='';
+   renderDetail();
+   for(const button of root.querySelectorAll('[data-cg-month]'))button.disabled=isLoading()||!targetMonth(Number(button.dataset.cgMonth));
+  }
+  root.addEventListener('click',event=>{
+   const day=event.target.closest('[data-cg-day]');
+   if(day&&!day.disabled){selectedDay=selectedDay===day.dataset.cgDay?'':day.dataset.cgDay;renderDetail();return;}
+   const arrow=event.target.closest('[data-cg-month]');
+   if(arrow&&!arrow.disabled){const target=targetMonth(Number(arrow.dataset.cgMonth));if(target){selectedDay='';onNavigate(target);}}
+  });
+  document.addEventListener('click',event=>{
+   if(!selectedDay)return;
+   const day=event.target.closest('[data-cg-day]');
+   if((day&&root.contains(day)&&!day.disabled)||detail.contains(event.target))return;
+   selectedDay='';renderDetail();
+  });
+  const monthlyHost=document.createElement('div');monthlyHost.className='cg-production-monthly';root.lastElementChild.append(monthlyHost);
+  return {root,render,periods,monthlyHost};
+ }
+ function createProductivityMonthly(host,fields,getData,currentMonth=()=>{
+  const parts=new Intl.DateTimeFormat('en',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit'}).formatToParts(new Date());
+  return parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value;
+ }){
+  host.innerHTML='<p class="cg-production-notice" role="status" aria-live="polite"></p><div class="cg-monthly-scroll" tabindex="0" role="region" aria-label="Acumulado mensal por unidade e turno. Role verticalmente para consultar os meses e o total anual."></div>';
+  const status=host.querySelector('p'),box=host.querySelector('.cg-monthly-scroll');
+  let lastHTML='',lastPeriods='';
+  function periods(){
+   const now=currentMonth(),yearNow=Number(now.slice(0,4)),selected=PcpMulti.values(fields.Ano.value);
+   const years=[...new Set(selected.length?selected:[...fields.Ano.options].map(o=>o.value))].map(Number).filter(y=>Number.isInteger(y)&&y>=1000&&y<=yearNow).sort((a,b)=>a-b);
+   return years.flatMap(year=>Array.from({length:12},(_,i)=>({year,month:i+1})));
+  }
+  function layout(reset=false){
+   const table=box.querySelector('table');if(!table)return;
+   table.style.width='100%';
+   if(reset){box.scrollTop=0;box.scrollLeft=0;}
+  }
+  function resetPosition(){requestAnimationFrame(()=>layout(true));}
+  function render(){
+   if(host.closest('[hidden]'))return;
+   // O acumulado sempre mostra as duas empresas, sem o filtro Unidade / Turno do calendário.
+   const data=getData(),months=periods(),units='',groupAllowed=PcpMulti.includes(fields.Grupo.value,'producao'),keys=['10','111'],sums=new Map(),dailyRows=new Map(),weights=new Map();
+   status.hidden=data.status!=='loading'&&data.status!=='error'&&data.turnosStatus!=='error';
+   if(data.status==='ready'&&groupAllowed&&data.limit){
+    for(const row of data.rows){
+     if(row.data>data.limit||row.quantidade_cabecas==null||!Number.isFinite(row.quantidade_cabecas))continue;
+     const key=row.empresa_codigo+'|'+row.data.slice(0,7);sums.set(key,(sums.get(key)??0)+row.quantidade_cabecas);
+     if(!dailyRows.has(key))dailyRows.set(key,[]);dailyRows.get(key).push(row);
+    }
+    for(const row of data.pesos||[]){
+     if(row.data>data.limit||!Number.isFinite(row.peso_vivo))continue;
+     const key=row.empresa_codigo+'|'+row.data.slice(0,7);weights.set(key,(weights.get(key)??0)+row.peso_vivo);
+    }
+    // Detalhe por turno independente dos totais consolidados do diário comum.
+    for(const row of data.turnosRows||[]){
+     if(row.data>data.limit||row.empresa_codigo!=='10')continue;
+     for(const turn of ['1','2']){
+      const value=row.turnos?.[turn];if(!Number.isFinite(value))continue;
+      const key=turn+'|'+row.data.slice(0,7);sums.set(key,(sums.get(key)??0)+value);
+      if(!dailyRows.has(key))dailyRows.set(key,[]);
+      dailyRows.get(key).push({...row,quantidade_cabecas:value});
+     }
+    }
+    for(const row of data.turnosPesos||[]){
+     if(row.data>data.limit||row.empresa_codigo!=='10')continue;
+     for(const turn of ['1','2']){
+      const value=row.turnos?.[turn];if(!Number.isFinite(value))continue;
+      const key=turn+'|'+row.data.slice(0,7);weights.set(key,(weights.get(key)??0)+value);
+     }
+    }
+   }
+   status.textContent=!groupAllowed?'Aves pertencem ao grupo Produção e perdas.':data.status==='loading'?'Consultando acumulados mensais…':data.status==='error'?'Não foi possível consultar o acumulado mensal. Clique em Produtividade para tentar novamente.':'Totais de aves por mês'+(data.limit?' · até '+data.limit.split('-').reverse().join('/')+' (D−1)':'')+'. Mês, Dia e Semana cheia não alteram esta tabela. Role verticalmente para consultar os meses de janeiro a dezembro.';
+   if(data.status==='ready'&&data.turnosStatus==='error')status.textContent='Não foi possível consultar os turnos da Ave Nova. Os totais consolidados permanecem disponíveis.';
+   const signature=months.map(p=>p.year+'-'+p.month).join(','),reset=signature!==lastPeriods;lastPeriods=signature;
+   if(!months.length){box.innerHTML='<p class="pcp-report-notice">Sem meses disponíveis para o ano selecionado.</p>';lastHTML='';return;}
+   function summary(code,periods){
+    const entries=periods.map(period=>code+'|'+period),rows=entries.flatMap(key=>dailyRows.get(key)||[]);
+    const sum=map=>{const values=entries.map(key=>map.get(key)).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
+    return {value:sum(sums),weight:sum(weights),rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
+   }
+   function combined(items){
+    const sum=field=>{const values=items.map(item=>item[field]).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
+    const actual=items.filter(item=>Number.isFinite(item.value)),value=sum('value');
+    const meta=actual.length&&actual.every(item=>Number.isFinite(item.rating.meta))?actual.reduce((total,item)=>total+item.rating.meta,0):null;
+    return {value,weight:sum('weight'),rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
+   }
+   function cellMarkup({value,weight,rating}){
+    const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
+    return productivityWeightMarkup(weight)+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating);
+   }
+   function cell(item,className='',label=''){
+    return '<td data-cg-label="'+esc(label)+'"'+(className?' class="'+className+'"':'')+'>'+cellMarkup(item)+'</td>';
+   }
+   function aveNovaCell(total,periods){
+    return '<td data-cg-label="Ave Nova"><div class="cg-monthly-an-breakdown">'+['1','2'].map(turn=>'<section data-cg-month-turn="'+turn+'"><h4>'+esc(productivityUnitOptions.find(option=>option[0]===turn)[1])+'</h4>'+cellMarkup(summary(turn,periods))+'</section>').join('')+'<section data-cg-month-an-total><h4>Total</h4>'+cellMarkup(total)+'</section></div></td>';
+   }
+   const totalColumn=keys.length>1;
+   const html='<table class="cg-table cg-monthly-table cg-monthly-pivot"><caption class="cg-production-sr">Acumulado mensal por empresa, total do mês e totais anuais até D−1</caption><colgroup><col class="cg-monthly-month-col">'+keys.map(()=>'<col>').join('')+(totalColumn?'<col>':'')+'</colgroup><thead><tr><th scope="col">Mês</th>'+keys.map(code=>'<th scope="col">'+esc(headCompanies[code])+'</th>').join('')+(totalColumn?'<th scope="col" class="cg-monthly-total">Total do mês</th>':'')+'</tr></thead><tbody>'+months.map(({year,month})=>{
+    const period=year+'-'+String(month).padStart(2,'0'),now=currentMonth();
+    const name=new Date(Date.UTC(year,month-1,1)).toLocaleDateString('pt-BR',{month:'long',timeZone:'UTC'});
+    const rowClass=period===now?' class="cg-monthly-current"':period>now?' class="cg-monthly-future"':'';
+    const items=keys.map(code=>summary(code,[period]));
+    let html='<tr data-cg-month-period="'+period+'"'+rowClass+'><th scope="row"><span class="cg-monthly-month-number">'+String(month).padStart(2,'0')+'</span><span class="cg-monthly-month-name">'+esc(name)+'</span><small>'+year+'</small></th>'+items.map((item,i)=>keys[i]==='10'?aveNovaCell(item,[period]):cell(item,'',headCompanies[keys[i]])).join('')+(totalColumn?cell(combined(items),'cg-monthly-total','Total do mês'):'')+'</tr>';
+    if(month===12){
+     const annualPeriods=months.filter(p=>p.year===year).map(p=>p.year+'-'+String(p.month).padStart(2,'0'));
+     const annual=keys.map(code=>summary(code,annualPeriods));
+     html+='<tr class="cg-monthly-annual" data-cg-total-year="'+year+'"><th scope="row">Total do ano<small>'+year+'</small></th>'+annual.map((item,i)=>keys[i]==='10'?aveNovaCell(item,annualPeriods):cell(item,'',headCompanies[keys[i]])).join('')+(totalColumn?cell(combined(annual),'cg-monthly-grand-total','Total geral do ano'):'')+'</tr>';
+    }
+    return html;
+   }).join('')+'</tbody></table>';
+   if(html!==lastHTML){const top=box.scrollTop,left=box.scrollLeft;lastHTML=html;box.innerHTML=html;requestAnimationFrame(()=>{layout(reset);if(!reset){box.scrollTop=top;box.scrollLeft=left;}});}
+   else if(reset)resetPosition();
+  }
+  new ResizeObserver(()=>layout()).observe(box);
+  return {render,periods,resetPosition};
+ }
  function mount(){
   const mobile=PcpMobileScroll.active();
   const filter=document.querySelector('.filter-card');filter.className='card pcp-comparativo-filtros cg-filters';
@@ -9,6 +574,100 @@ window.PcpCirurgico=(()=>{
 
   const content=document.getElementById('pcpConteudo');content.className='pcp-report-panels';content.innerHTML='<article class="card pcp-report-panel"><header><h2>Indicadores por dia</h2></header><div id="cgDiario" class="cg-scroll"></div></article><article class="card pcp-report-panel"><header><h2>Acumulado mensal</h2><div hidden><p>Razões calculadas pelos pesos acumulados até D−1. A seleção de dia limita o quadro diário; o acumulado mantém o mês escolhido.</p><p>Condenação: menor ou igual à meta. Demais indicadores: maior ou igual à meta. Ausência de base é apresentada como —.</p></div></header><div id="cgMensal" class="cg-scroll"></div></article>';
   const ids=['Ano','Mes','Dia','Unidade','Grupo'],fields=Object.fromEntries(ids.map(k=>[k,document.getElementById('cg'+k)]));let data=null,generation=0,controller,loading=false;
+  const monthFilter=createProductivityMonthFilter(fields.Mes);
+  const unitFilter=createProductivityUnitFilter(fields.Unidade);
+  const groupFilter=createProductivityGroupFilter(fields.Grupo);
+  let headsState={status:'idle',rows:[]},headsKey='',headsGeneration=0,headsController=null;
+  let monthlyState={status:'idle',rows:[]},monthlyKey='',monthlyGeneration=0,monthlyController=null;
+  const indicatorWeekFilter=document.createElement('label');indicatorWeekFilter.className='cg-production-week-filter';indicatorWeekFilter.hidden=true;
+  indicatorWeekFilter.innerHTML='<input type="checkbox" id="cgSemanaCheia"><span>Semana cheia</span>';
+  fields.SemanaCheia=indicatorWeekFilter.querySelector('input');
+  fields.SemanaCheia.onchange=()=>{refreshHeads(true);productivity.render();};
+  const yieldPanels=[...content.children];
+  const productivity=createProductivityCalendar(content,fields,({year,month})=>{
+   fields.Ano.value=String(year);fields.Mes.value=String(month);fields.Dia.value='';load();
+  },()=>loading,()=>headsState);
+  const monthly=createProductivityMonthly(productivity.monthlyHost,fields,()=>monthlyState);
+  let indicatorMode='rendimento';
+  const indicatorFlags=PcpPeriodFlags.create('cgTipoIndicador',indicatorMode,mode=>{
+   indicatorMode=mode;
+   filter.classList.toggle('cg-productivity-filters',mode==='produtividade');
+   layoutIndicatorMode(mode);
+   const monthChanged=monthFilter.sync(mode);
+   unitFilter.sync(mode);
+   groupFilter.sync(mode);
+   if(mode==='produtividade'&&monthChanged)fields.Dia.value='';
+   for(const panel of yieldPanels)panel.hidden=mode==='produtividade';
+   indicatorWeekFilter.hidden=mode!=='produtividade';
+   productivity.root.hidden=mode!=='produtividade';productivity.render();
+   if(mode==='rendimento'){load();requestAnimationFrame(scrollTablesToLatest);}
+   else{if(monthChanged)load();else{refreshHeads(true);refreshMonthly(true);}monthly.resetPosition();}
+  },[['rendimento','Rendimento'],['produtividade','Produtividade']]);
+  indicatorFlags.setAttribute('aria-label','Tipo de indicador');
+  indicatorFlags.querySelector('legend').textContent='Tipo de indicador';
+  const indicatorToolbar=document.createElement('div');
+  indicatorToolbar.className='cg-filter-actions';
+  indicatorToolbar.append(indicatorWeekFilter);
+  const filterRow=document.createElement('div');filterRow.className='cg-filter-row';filterRow.hidden=true;
+  const originalFilterGrid=filter.querySelector('.cg-filter-grid'),originalFilterActions=filter.querySelector('.pcp-comparativo-filter-head>div');
+  // Mantém a estrutura e o botão Atualizar oficiais em Rendimento.
+  originalFilterActions.append(indicatorFlags);filter.append(filterRow);
+  function layoutIndicatorMode(mode){
+   const production=mode==='produtividade';
+   document.getElementById('cgAtualizar').hidden=production;
+   if(production){
+    filterRow.append(originalFilterGrid,indicatorToolbar);indicatorToolbar.append(indicatorFlags);
+   }else{
+    filter.insertBefore(originalFilterGrid,filterRow);originalFilterActions.append(indicatorFlags);
+   }
+   filterRow.hidden=!production;
+  }
+  async function refreshHeads(force=false){
+   if(indicatorMode!=='produtividade'){
+    if(headsController){headsGeneration++;headsController.abort();headsController=null;}
+    headsKey='';headsState={status:'idle',rows:[]};
+    return;
+   }
+   const limit=data?.data_limite;
+   if(!limit){
+    if(headsController){headsGeneration++;headsController.abort();headsController=null;}
+    headsKey='';headsState={status:loading?'loading':'error',rows:[]};productivity.render();return;
+   }
+   const periods=productivity.periods(),units=fields.Unidade.value,fullWeek=!!fields.SemanaCheia?.checked,key=JSON.stringify([periods,units,fullWeek,limit]);
+   if(!force&&headsKey===key)return;
+   headsKey=key;const id=++headsGeneration;headsController?.abort();headsController=new AbortController();
+   headsState={status:'loading',rows:[],limit};productivity.render();
+   try{
+    const [production,targets,weight]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityTargets.load(apiGet,periods,headsController.signal,fullWeek,limit),productivityWeight.load(apiGet,periods,units,headsController.signal,fullWeek,limit)]);
+    if(production.status==='rejected')throw production.reason;
+    if(id!==headsGeneration)return;
+    headsState={status:'ready',rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',limit};
+   }catch(e){
+    if(id!==headsGeneration)return;
+    headsState={status:'error',rows:[],limit};
+   }finally{if(id===headsGeneration){headsController=null;productivity.render();}}
+  }
+  async function refreshMonthly(force=false){
+   const limit=data?.data_limite;
+   if(indicatorMode!=='produtividade'||!PcpMulti.includes(fields.Grupo.value,'producao')||!limit){
+    if(monthlyController){monthlyGeneration++;monthlyController.abort();monthlyController=null;}
+    monthlyKey='';monthlyState={status:limit?'idle':loading?'loading':'error',rows:[],limit};monthly.render();return;
+   }
+   // Consolidado anual das duas empresas; Unidade / Turno só controla o calendário.
+   const periods=monthly.periods(),units='',key=JSON.stringify([periods,units,limit]);
+   if(!force&&monthlyKey===key){monthly.render();return;}
+   monthlyKey=key;const id=++monthlyGeneration;monthlyController?.abort();monthlyController=new AbortController();
+   monthlyState={status:'loading',rows:[],limit};monthly.render();
+   try{
+    const [production,targets,weight,turns,turnWeights]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit)]);
+    if(production.status==='rejected')throw production.reason;
+    if(id!==monthlyGeneration)return;
+    monthlyState={status:'ready',rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
+   }catch(e){
+    if(id!==monthlyGeneration)return;
+    monthlyState={status:'error',rows:[],limit};
+   }finally{if(id===monthlyGeneration){monthlyController=null;monthly.render();}}
+  }
   const dialog=document.createElement('dialog');dialog.className='cg-dialog';dialog.setAttribute('aria-labelledby','cgGraficoTitulo');dialog.innerHTML='<header class="cg-dialog-header"><div><h2 id="cgGraficoTitulo"></h2><p id="cgGraficoContexto"></p></div><div class="cg-dialog-actions"><button type="button" class="button" id="cgMaximizar" aria-pressed="false">Maximizar</button><button type="button" class="button cg-dialog-close">Fechar</button></div></header><div class="cg-chart-filters"><input type="hidden" id="cgGraficoModo" value="dias"><div id="cgCampoDias"><span>Dias · seleção múltipla</span><div id="cgGraficoDias" class="checkbox-multiselect"></div></div><div id="cgCampoSemanas" class="hidden"><span>Semanas · seleção múltipla</span><div id="cgGraficoSemanas" class="checkbox-multiselect"></div></div><div id="cgCampoUnidades"><span>Unidades · seleção múltipla</span><div id="cgGraficoUnidades" class="checkbox-multiselect"></div></div><button type="button" id="cgGraficoLimpar" class="button">Limpar seleção</button></div><div id="cgGraficoLinhas" class="cg-line-chart" aria-label="Evolução diária do indicador"></div>';document.body.append(dialog);
   const chartEl=dialog.querySelector('.cg-line-chart');let lineChart=null,activeIndicator=null,graphPeriod='',graphUnit='',referenceVisible=true,drilledWeek=null,savedDays=null,visibleWeekRows=[],mobileLinePeriod='';
   const graphFields=[{id:'cgGraficoDias',apiKey:'dias',multi:true,search:true},{id:'cgGraficoSemanas',apiKey:'semanas',multi:true,search:true},{id:'cgGraficoUnidades',apiKey:'unidades',multi:true,search:true}],graphMode=dialog.querySelector('#cgGraficoModo');
@@ -61,6 +720,11 @@ window.PcpCirurgico=(()=>{
   if(mobile)document.querySelector('#cgDiario').previousElementSibling.insertAdjacentHTML('beforeend','<p class="ef-mobile-units">AN · Ave Nova &nbsp; / &nbsp; RA · Real Alimentos<br>1º / 2º · Turnos da Ave Nova</p>');
   const tableObserver=new ResizeObserver(()=>scrollTablesToLatest());for(const id of ['cgDiario','cgMensal'])tableObserver.observe(document.getElementById(id));
   function render(){
+   monthFilter.sync(indicatorMode);
+   unitFilter.sync(indicatorMode);
+   refreshHeads();
+   refreshMonthly();
+   productivity.render();
    if(!data)return;const keys=selectedColumns(),rows=data.indicadores.filter(r=>PcpMulti.includes(fields.Grupo.value,r.ordem<=8?'familias':'producao'));
    function table(blocks,monthly){
     if(!blocks.length)return '<p class="pcp-report-notice">Sem dados para o período selecionado.</p>';
@@ -70,14 +734,22 @@ window.PcpCirurgico=(()=>{
    document.getElementById('cgDiario').innerHTML=table(data.dias.filter(d=>PcpMulti.includes(fields.Dia.value,d.data)),false);document.getElementById('cgMensal').innerHTML=table(data.mensal,true);syncLineFilters();renderLine();requestAnimationFrame(scrollTablesToLatest);
   }
   async function load(){
+   monthFilter.sync(indicatorMode);
+   unitFilter.sync(indicatorMode);
    const id=++generation;if(controller)controller.abort();controller=new AbortController();loading=true;
+   refreshHeads(true);
+   refreshMonthly();
+   productivity.render();
    try{const result=await apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:fields.Ano.value||[...fields.Ano.options].map(o=>o.value).join(','),mes:fields.Mes.value||Array.from({length:12},(_,i)=>i+1).join(',')},{silent:true,signal:controller.signal});if(id!==generation)return;if(!result.ok)throw new Error('Consulta não concluída');data=result;
     fields.Ano.innerHTML=result.anos.map(y=>'<option value="'+y+'">'+y+'</option>').join('');fields.Ano.value=result.ano;fields.Mes.value=result.mes;const day=fields.Dia.value;fields.Dia.innerHTML='<option value="">Todos</option>'+result.dias.map(d=>'<option value="'+d.data+'">'+d.data.split('-').reverse().join('/')+'</option>').join('');fields.Dia.value=PcpMulti.values(day).filter(v=>result.dias.some(d=>d.data===v)).join(',');
     render();PcpReportHeader.update(result.ultima_atualizacao);document.getElementById('mensagemErro').classList.add('hidden');document.getElementById('estadoConsulta').textContent='Dados reais · até '+result.data_limite.split('-').reverse().join('/')+' (D−1)';
    }catch(e){if(id!==generation||e.name==='AbortError')return;if(e.status===401||e.status===403){data=null;lineChart?.clear();if(dialog.open)dialog.close();document.getElementById('cgDiario').replaceChildren();document.getElementById('cgMensal').replaceChildren();}const error=document.getElementById('mensagemErro');error.textContent='Não foi possível atualizar o comparativo. '+(data?'A última consulta permanece visível.':'');error.classList.remove('hidden');}
-   finally{if(id===generation)loading=false;}
+   finally{if(id===generation){loading=false;productivity.render();}}
   }
-  fields.Ano.onchange=fields.Mes.onchange=()=>{fields.Dia.value='';load();};fields.Dia.onchange=fields.Unidade.onchange=fields.Grupo.onchange=render;document.getElementById('cgAtualizar').onclick=load;document.getElementById('cgLimpar').onclick=()=>{fields.Grupo.value=fields.Unidade.value=fields.Dia.value='';fields.Ano.value=now.getFullYear();fields.Mes.value=now.getMonth()+1;load();};setInterval(()=>{if(!document.hidden&&!loading)load();},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!loading)load();});PcpMulti.enhance(filter);load();
+  document.getElementById('cgAtualizar').onclick=load;
+  fields.Ano.onchange=fields.Mes.onchange=()=>{fields.Dia.value='';load();};fields.Dia.onchange=fields.Unidade.onchange=fields.Grupo.onchange=render;document.getElementById('cgLimpar').onclick=()=>{fields.Grupo.value=fields.Unidade.value=fields.Dia.value='';fields.Ano.value=now.getFullYear();fields.Mes.value=now.getMonth()+1;if(indicatorMode==='produtividade'){fields.Unidade.value='10';fields.SemanaCheia.checked=false;monthly.resetPosition();}load();};
+  function refreshAutomatically(){if(indicatorMode==='rendimento'&&!document.hidden&&!loading)load();}
+  setInterval(refreshAutomatically,60000);document.addEventListener('visibilitychange',refreshAutomatically);PcpMulti.enhance(filter);monthFilter.sync(indicatorMode);unitFilter.sync(indicatorMode);load();
  }
  return {mount};
 })();

@@ -4,7 +4,7 @@
  const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const page=()=>catalog.sector==='pcp'?(document.body.dataset.page?.replace('report-','')||new URLSearchParams(location.search).get('relatorio')||'g8'):(document.body.dataset.page||new URLSearchParams(location.search).get('relatorio')||(catalog.sector==='suprimentos'?'prazo':'frete'));
- const docs=()=>catalog.pages[page()]||[];
+ const docs=()=>(catalog.pages[page()]||[]).filter(d=>!d.adminOnly||document.body.dataset.pcpStops==='true');
  const labelOf=el=>{const clone=el.cloneNode(true);clone.querySelectorAll('[data-indicator-formula]').forEach(b=>b.remove());return clone.textContent.trim();};
  function find(label){const key=norm(label);return docs().find(d=>[d.nome,...(d.aliases||[])].some(n=>norm(n)===key));}
  let dialog,opener,previousOverflow;

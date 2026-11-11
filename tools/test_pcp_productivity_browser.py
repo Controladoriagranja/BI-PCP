@@ -253,7 +253,7 @@ def main():
 <body class="pcp-report"><div class="app-shell"><header class="page-header"><div><h1>Comparativo x Cirúrgico Geral</h1><p></p></div><div class="header-toolbar"></div></header>
 <section class="card filter-card"></section><div id="mensagemErro" class="hidden"></div><p id="estadoConsulta"></p><main id="pcpConteudo"></main></div><pre id="test-result" hidden>PENDING</pre>
 <script src="/assets/js/config.js"></script><script>__SCRIPT__</script><script src="/assets/js/filters.js"></script><script src="/assets/js/pcp-multiselect.js"></script>
-<script src="/assets/js/pcp-report-model.js"></script><script src="/assets/js/pcp-paradas.js"></script><script src="/assets/js/pcp-cirurgico.js"></script><script src="/assets/js/pcp-report.js"></script><script src="/assets/js/indicator-formulas-data.js"></script><script src="/assets/js/indicator-formulas.js"></script><script>__TEST__</script></body></html>'''
+<script src="/assets/js/pcp-report-model.js"></script><script src="/assets/js/pcp-condenacoes.js"></script><script src="/assets/js/pcp-paradas.js"></script><script src="/assets/js/pcp-cirurgico.js"></script><script src="/assets/js/pcp-report.js"></script><script src="/assets/js/indicator-formulas-data.js"></script><script src="/assets/js/indicator-formulas.js"></script><script>__TEST__</script></body></html>'''
     page = page.replace('__SCRIPT__', SCRIPT.replace('__FIXTURE__', json.dumps(fixture, ensure_ascii=False))).replace('__TEST__', TEST)
     (OUT / 'preview.html').write_text(page, encoding='utf-8')
     handler = functools.partial(QuietHandler, directory=str(ROOT))

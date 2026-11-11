@@ -730,3 +730,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .cg-stops-reference{display:grid;gap:2px;white-space:normal;font-size:9px;line-height:1.3}
 
 .cg-stops-body>section[hidden]{display:none}.cg-stops-type{border:0;background:none;color:var(--primary,#7a1726);font:inherit;text-decoration:underline;cursor:pointer;padding:0}.cg-stops-back{margin-bottom:12px}
+
+.cg-cond-summary .pcp-table-scroll{max-height:62dvh;overflow:auto}.cg-cond-rows{max-height:60dvh;overflow:auto}.cg-cond-pages{display:flex;gap:10px;align-items:center;margin-top:10px}.cg-cond-note{font-size:11px}.cg-cond-dialog .cg-stops-body table{white-space:nowrap}

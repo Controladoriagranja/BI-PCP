@@ -11,7 +11,7 @@ window.PcpParadas=(()=>{
     const total=result.cobertura_completa||result.total_ocorrencias?result.total_minutos:null;
     summary.innerHTML=table(['Tipos de parada','Tempo total (minutos)','Tempo total (horas)','%'],[...result.resumo.map(r=>[r.tipo,num(r.minutos),hours(r.minutos),pct(r.participacao)]),['TOTAL',num(total),total==null?'—':hours(total),total? '100,00%':total===0?'0,00%':'—']]);summary.querySelector('tbody tr:last-child')?.classList.add('cg-stops-total');
     detail.innerHTML=result.detalhes.length?table(['Data','Unidade','Célula','Descrição','Hora inicial','Hora final','Tempo (min)','Observação','Equipamento','Usuário'],result.detalhes.map(r=>[day(r.data),unit(r.unidade),r.celula,r.tipo,r.hora_inicial,r.hora_final,num(r.minutos),r.observacao,r.equipamento,r.usuario])):'<p>Sem ocorrências nos dados carregados para este período.</p>';
-    status.textContent=num(result.total_ocorrencias)+' ocorrências · Meta a definir'+(result.cobertura_completa?'':' · Cobertura parcial: há dias ainda sem carga confirmada.');
+    status.textContent=num(result.total_ocorrencias)+' ocorrências · Meta diária'+(result.meta_por_unidade?' por unidade':'')+': '+num(result.meta_diaria)+' min · Igual ou abaixo: verde; acima: vermelho'+(result.cobertura_completa?'':' · Cobertura parcial: há dias ainda sem carga confirmada.');
    }catch(e){if(e.name!=='AbortError'&&id===generation){status.textContent='Não foi possível carregar as paradas. Tente novamente.';summary.replaceChildren();detail.replaceChildren();}}
    finally{if(id===generation)dialog.setAttribute('aria-busy','false');}
   }

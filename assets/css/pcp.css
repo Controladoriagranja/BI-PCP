@@ -734,3 +734,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .cg-cond-summary .pcp-table-scroll{max-height:62dvh;overflow:auto}.cg-cond-rows{max-height:60dvh;overflow:auto}.cg-cond-pages{display:flex;gap:10px;align-items:center;margin-top:10px}.cg-cond-note{font-size:11px}.cg-cond-dialog .cg-stops-body table{white-space:nowrap}
 
 .cg-cond-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.cg-cond-filters>label{display:grid;gap:6px;font-size:12px;min-width:0}.cg-cond-filters .checkbox-multiselect{position:relative}.cg-cond-dialog .cg-stops-body{overflow:visible}.cg-cond-dialog{overflow:visible}@media(max-width:600px){.cg-cond-filters{grid-template-columns:1fr}.cg-cond-dialog .cg-stops-body{overflow:auto}}
+
+.cg-cond-view-filter{max-width:420px}.cg-cond-view-filter>label{display:grid;gap:6px;font-size:12px}.cg-cond-view-filter .checkbox-multiselect{position:relative}

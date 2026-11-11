@@ -2,7 +2,7 @@
 window.PcpCirurgico=(()=>{
  const esc=ApiScreen.escape,pct=v=>v==null?'—':(v*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
  const indicatorValue=(v,r)=>r?.unidade==='min'?(v==null?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2})+' min'):pct(v);
- const stopReference=(r,blocks,keys)=>{if(r.unidade!=='min')return esc(indicatorValue(r.meta,r));const metas=blocks.map(b=>b.metas_paradas||r.metas_por_coluna||{}),values=[...new Set(metas.map(m=>m['1']??m['111']??72))];return values.length>1?'Conforme mês':esc(Number(values[0]).toLocaleString('pt-BR')+' min');};
+ const stopReference=(r,blocks,keys)=>{if(r.unidade!=='min')return esc(indicatorValue(r.meta,r));const metas=blocks.map(b=>b.metas_paradas||r.metas_por_coluna||{}),values=[...new Set(metas.map(m=>m['1']??m['111']??30))];return values.length>1?'Conforme mês':esc(Number(values[0]).toLocaleString('pt-BR')+' min');};
  const cols={'1':'1º turno - AN','2':'2º turno - AN','10':'Ave Nova - AN','111':'Real Alimentos'};
  const headCompanies={'10':'Ave Nova','111':'Real Alimentos'};
  const headCompanyLabels={'10':'A.N.','111':'R.A.','both':'A.N. + R.A.'};

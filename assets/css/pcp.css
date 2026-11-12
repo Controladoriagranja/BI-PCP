@@ -810,7 +810,6 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center;background-repeat:no-repeat}
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th:first-child{background-image:linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px;background-position:center bottom;background-repeat:no-repeat}
 
-/* Evita cantos arredondados e artefatos na divisória ao lado de Mês. */
+/* Todas as divisórias dos turnos usam o mesmo traço e os mesmos recuos. */
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border-radius:0}
-#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{border:0;border-radius:0;box-shadow:none;background-image:linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px;background-position:center bottom;background-repeat:no-repeat;position:relative}
-#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:1px;background:var(--border);border:0;border-radius:0;box-shadow:none}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{border:0;box-shadow:none;position:static;background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center;background-repeat:no-repeat}

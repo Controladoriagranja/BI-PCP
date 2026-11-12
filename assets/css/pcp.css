@@ -834,5 +834,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-stops strong{font-family:inherit;font-size:12px;font-weight:650;text-align:right}
 #cgProdutividade .cg-monthly-stops:hover{background:var(--muted)}
 
-#cgProdutividade .cg-calendar-mean{display:flex;justify-content:space-between;align-items:baseline;gap:4px;width:100%;font-size:12px;line-height:1.3;color:var(--muted)}
-#cgProdutividade .cg-calendar-mean strong{font:inherit;font-weight:650;color:var(--text);text-align:right}
+#cgProdutividade .cg-calendar-mean{display:flex;justify-content:space-between;align-items:baseline;gap:4px;width:100%;font-size:12px;line-height:1.3;color:var(--muted-foreground)}
+#cgProdutividade .cg-calendar-mean strong{font:inherit;font-weight:650;color:var(--foreground);text-align:right}

@@ -128,6 +128,8 @@ TEST = r'''
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
    assert(document.querySelector('.cg-calendar-mean strong')?.textContent==='3,125','Peso Médio usa indicador do diário com três casas');
+   assert([...monthRow.querySelectorAll('.cg-calendar-mean strong')].every(e=>e.textContent==='3,125')&&monthRow.querySelectorAll('.cg-calendar-mean').length===5,'Médias mensais ponderadas em todas as colunas');
+   assert(getComputedStyle(document.querySelector('.cg-calendar-mean strong')).color===getComputedStyle(document.querySelector('.cg-production-day-weight strong')).color,'Peso médio segue cor do peso');
    const monthlyExpected=[222318,142587,364905];
    const stopValues=[...monthRow.querySelectorAll('.cg-monthly-stops strong')].map(e=>e.textContent);
    assert(JSON.stringify(stopValues)===JSON.stringify(['20 min','35 min','55 min','40 min','95 min']),'Paradas mensais por turno, empresa e geral: '+stopValues);

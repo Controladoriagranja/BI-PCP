@@ -345,6 +345,7 @@ window.PcpCirurgico=(()=>{
   return {year,week:Math.ceil(((thursday-new Date(Date.UTC(year,0,1)))/86400000+1)/7)};
  }
  // Nova modificação de 29/10/2026: peso ao lado do dia, sem alterar valores.
+ function productivityMeanMarkup(value){return '<span class="cg-calendar-mean" title="Peso Médio das aves · Diário da Indústria; totais ponderados pela quantidade de aves"><span>Peso médio (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3}):'—')+'</strong></span>';}
  function productivityHeaderWeights(rows){
   return rows.map(row=>'<span class="cg-production-day-weight" title="Peso Vivo para Rendimento · '+esc(row.empresa||'')+'"><span>'+(rows.length>1?esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+' · ':'')+'Peso (kg)</span><strong>'+esc(Number.isFinite(row.peso_vivo)?row.peso_vivo.toLocaleString('pt-BR',{maximumFractionDigits:6}):'—')+'</strong></span>').join('');
  }
@@ -372,13 +373,13 @@ window.PcpCirurgico=(()=>{
    if(!rows.length&&!weights.length)return [];
    return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:null},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null,peso_medio:(getHeads().medias||[]).find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??null}));
   }
-  function meanMarkup(value){return '<span class="cg-calendar-mean" title="Peso Médio das aves · Diário da Indústria; totais ponderados pela quantidade de aves"><span>Peso médio (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3}):'—')+'</strong></span>';}
+
   function weightedMean(rows){const valid=rows.filter(r=>Number.isFinite(r.peso_medio)&&Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0),count=valid.reduce((n,r)=>n+r.quantidade_cabecas,0);return valid.length===rows.filter(r=>Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0).length&&count?valid.reduce((n,r)=>n+r.peso_medio*r.quantidade_cabecas,0)/count:null;}
   function headsMarkup(rows,showWeight=true){
    rows=displayRows(rows);
    return rows.length?'<span class="cg-production-heads">'+rows.map(row=>{
     const rating=row._rating||productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit());
-    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+meanMarkup(row.peso_medio)+(showWeight?productivityWeightMarkup(row.peso_vivo):'')+'</span>';
+    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+productivityMeanMarkup(row.peso_medio)+(showWeight?productivityWeightMarkup(row.peso_vivo):'')+'</span>';
    }).join('')+'</span>':'<span class="cg-production-empty" aria-hidden="true">—</span>';
   }
   function stopsMarkup(dates){
@@ -553,19 +554,21 @@ window.PcpCirurgico=(()=>{
     const stopPeriods=periods.filter(period=>!data.limit||period<=data.limit.slice(0,7)),stopBlocks=stopPeriods.map(period=>(data.paradas||[]).find(b=>b.mes===period));
     const complete=stopBlocks.length&&stopBlocks.every(b=>Number.isFinite(b?.valores?.[code]?.[14])&&Number.isFinite(b?.metas_paradas?.[code]));
     const stops={minutes:complete?stopBlocks.reduce((n,b)=>n+b.valores[code][14],0):null,target:complete?stopBlocks.reduce((n,b)=>n+b.metas_paradas[code],0):null,periods:stopPeriods,view:code};
-    return {value:sum(sums),weight:sum(weights),stops,rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
+    const meanRows=rows.filter(r=>r.quantidade_cabecas>0),meanValues=meanRows.map(r=>({count:r.quantidade_cabecas,mean:(['1','2'].includes(code)?data.turnosMedias:data.medias||[]).find(m=>m.data===r.data&&(['1','2'].includes(code)?m._turn===code:m.empresa_codigo===code))?.quantidade_cabecas})),meanCount=meanValues.reduce((n,r)=>n+r.count,0),mean=meanCount&&meanValues.every(r=>Number.isFinite(r.mean))?meanValues.reduce((n,r)=>n+r.mean*r.count,0)/meanCount:null;
+    return {value:sum(sums),weight:sum(weights),mean,stops,rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
    }
    function combined(items){
     const sum=field=>{const values=items.map(item=>item[field]).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
     const actual=items.filter(item=>Number.isFinite(item.value)),value=sum('value');
     const meta=actual.length&&actual.every(item=>Number.isFinite(item.rating.meta))?actual.reduce((total,item)=>total+item.rating.meta,0):null;
     const complete=items.every(item=>Number.isFinite(item.stops?.minutes)),stops={minutes:complete?items.reduce((n,item)=>n+item.stops.minutes,0):null,target:complete?items.reduce((n,item)=>n+item.stops.target,0):null,periods:items[0]?.stops?.periods||[],view:'geral'};
-    return {value,weight:sum('weight'),stops,rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
+    const mean=actual.length&&actual.every(i=>Number.isFinite(i.mean))&&value>0?actual.reduce((n,i)=>n+i.mean*i.value,0)/value:null;
+    return {value,weight:sum('weight'),mean,stops,rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
    }
-   function cellMarkup({value,weight,rating,stops}){
+   function cellMarkup({value,weight,mean,rating,stops}){
     const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
     const stopsHTML=stops?.periods?.length?'<button type="button" class="cg-monthly-stops" data-cg-stop="'+stops.view+'" data-cg-date="'+stops.periods[0]+'" data-cg-monthly="true" data-cg-periods="'+stops.periods.join(',')+'" title="Ver resumo e ocorrências de paradas"><span>Paradas (min)</span><strong'+(stops.minutes==null?'':' class="'+(stops.minutes<=stops.target?'cg-prod-good':'cg-prod-bad')+'"')+'>'+esc(stops.minutes==null?'—':stops.minutes.toLocaleString('pt-BR')+' min')+'</strong></button>':'';
-    return productivityWeightMarkup(weight)+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+stopsHTML;
+    return productivityWeightMarkup(weight)+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+productivityMeanMarkup(mean)+stopsHTML;
    }
    function cell(item,className='',label=''){
     return '<td data-cg-label="'+esc(label)+'"'+(className?' class="'+className+'"':'')+'>'+cellMarkup(item)+'</td>';
@@ -699,10 +702,10 @@ window.PcpCirurgico=(()=>{
    monthlyKey=key;const id=++monthlyGeneration;monthlyController?.abort();monthlyController=new AbortController();
    monthlyState={status:'loading',rows:[],limit};monthly.render();
    try{
-    const [production,targets,weight,turns,turnWeights,stops]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit),apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:[...new Set(periods.map(p=>p.year))].join(','),mes:'1,2,3,4,5,6,7,8,9,10,11,12'},{silent:true,signal:monthlyController.signal})]);
+    const [production,targets,weight,turns,turnWeights,stops,means,turnMeans]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit),apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:[...new Set(periods.map(p=>p.year))].join(','),mes:'1,2,3,4,5,6,7,8,9,10,11,12'},{silent:true,signal:monthlyController.signal}),productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario','Peso Médio'),Promise.all(['1','2'].map(async turn=>(await productivityHeads.load(apiGet,periods,turn,monthlyController.signal,false,limit,'diario','Peso Médio')).map(row=>({...row,_turn:turn})))).then(rows=>rows.flat())]);
     if(production.status==='rejected')throw production.reason;
     if(id!==monthlyGeneration)return;
-    monthlyState={status:'ready',paradas:stops.status==='fulfilled'?stops.value.mensal:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
+    monthlyState={status:'ready',medias:means.status==='fulfilled'?means.value:[],turnosMedias:turnMeans.status==='fulfilled'?turnMeans.value:[],paradas:stops.status==='fulfilled'?stops.value.mensal:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
    }catch(e){
     if(id!==monthlyGeneration)return;
     monthlyState={status:'error',rows:[],limit};

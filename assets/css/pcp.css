@@ -783,3 +783,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-fixed-head tbody tr>td{display:table-cell;width:auto;border-left:1px solid var(--border);padding:7px;vertical-align:top}
 #cgProdutividade .cg-monthly-fixed-head tbody tr>td::before{display:none}
 #cgProdutividade .cg-monthly-fixed-head tbody tr>th:first-child{display:table-cell;position:sticky;left:0;width:78px;min-width:78px;max-width:78px;vertical-align:middle}
+
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border-color:var(--border);text-align:center}

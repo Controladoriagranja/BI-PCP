@@ -766,3 +766,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 @media(max-width:600px){.pcp-report .cg-dialog.cg-production-stops-dialog{height:94dvh;max-height:94dvh}.cg-production-stops-dialog>.cg-stops-body{overflow:auto}}
 
 .pcp-report .api-filter-progress{top:20px;right:20px;bottom:auto;left:auto;margin:0;max-width:calc(100vw - 40px)}
+
+.cg-stops-body .pcp-sort-button{border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;cursor:pointer;padding:3px;white-space:nowrap}.cg-stops-body th[aria-sort="descending"] .pcp-sort-button::after{content:" ▼"}.cg-stops-body th[aria-sort="ascending"] .pcp-sort-button::after{content:" ▲"}.cg-stops-body .pcp-sort-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}

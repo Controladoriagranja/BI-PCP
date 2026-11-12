@@ -11,3 +11,5 @@ Percentuais = soma dos pesos condenados / soma do peso vivo. Acumulado ponderado
 API: /api/pcp/comparativo/condenacoes, com sessão ativa no portal, parâmetros ano, mes, dias, visao, causa, tipo e pagina. Somente SELECT, D−1 e filtros SQL parametrizados. Sem mudanças em metas, agenda ou cálculos dos demais indicadores.
 
 Validação: reconciliação do resumo com os pesos, consulta diária de 10/11/2026 limitada à Ave Nova, tipos separados; navegador com causa, retorno e contexto diário/turno preservado, desktop e celular.
+
+Ordenação: clique em qualquer cabeçalho para maior→menor e clique novamente para inverter. TOTAL permanece no fim. Resumos de grupos, causas e tabelas de Paradas usam ordenação numérica pt-BR, datas e durações. Detalhes de Condenações ordenam no SQL por uma lista permitida de campos, com desempate estável, antes de LIMIT/OFFSET; a rolagem preserva coluna e direção.

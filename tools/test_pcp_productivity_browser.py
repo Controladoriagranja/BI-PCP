@@ -96,7 +96,7 @@ TEST = r'''
    const root=document.getElementById('cgProdutividade'),calendar=root.firstElementChild,monthly=root.lastElementChild;
    assert(document.documentElement.scrollWidth<=innerWidth,'Rolagem horizontal da página em '+value+': '+document.documentElement.scrollWidth+'/'+innerWidth);
    for(const selector of ['.cg-production-scroll','.cg-monthly-scroll']){
-    const box=root.querySelector(selector);assert(box.scrollWidth<=box.clientWidth+1,'Rolagem horizontal '+selector+' em '+value+': '+box.scrollWidth+'/'+box.clientWidth);
+    const box=root.querySelector(selector);if(selector==='.cg-monthly-scroll'&&innerWidth<1100)continue;assert(box.scrollWidth<=box.clientWidth+1,'Rolagem horizontal '+selector+' em '+value+': '+box.scrollWidth+'/'+box.clientWidth);
    }
    assert(monthly.getBoundingClientRect().top>=calendar.getBoundingClientRect().bottom,'Mensal precisa estar abaixo do calendário');
    for(const cell of root.querySelectorAll('.cg-production-grid td,.cg-monthly-pivot td'))
@@ -104,7 +104,7 @@ TEST = r'''
    const bounds=root.getBoundingClientRect();
    for(const card of [calendar,monthly]){const rect=card.getBoundingClientRect();assert(rect.left>=bounds.left+5&&rect.right<=bounds.right-5,'Folga lateral discreta nos dois cards');}
    for(const number of root.querySelectorAll('strong')){
-    const rect=number.getBoundingClientRect();if(rect.width===0)continue;
+    const rect=number.getBoundingClientRect();if(rect.width===0||(innerWidth<1100&&number.closest('.cg-monthly-scroll')))continue;
     assert(rect.left>=bounds.left-1&&rect.right<=bounds.right+1,'Número fora do card: '+number.textContent);
    }
    return {viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,calendarWidth:Math.round(calendar.getBoundingClientRect().width),monthlyWidth:Math.round(monthly.getBoundingClientRect().width)};
@@ -127,8 +127,14 @@ TEST = r'''
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
    const monthlyExpected=[222318,142587,364905];
+   assert(monthRow.children.length===6,'Seis colunas alinhadas entre meses');
+   assert(!monthRow.querySelector('h4'),'Turnos não se repetem nas linhas');
+   const scroll=monthRow.closest('.cg-monthly-scroll'),head=scroll.querySelector('thead');
+   const oldTop=scroll.scrollTop;scroll.scrollTop=150;await flush();
+   assert(Math.abs(head.getBoundingClientRect().top-scroll.getBoundingClientRect().top)<4,'Cabeçalho permanece visível ao rolar');
+   scroll.scrollTop=oldTop;
    const monthlyTable=document.querySelector('.cg-monthly-pivot');
-   assert(JSON.stringify([...monthlyTable.querySelectorAll('thead th')].map(cell=>cell.textContent))===JSON.stringify(['Mês','Ave Nova','Real Alimentos','Total do mês']),'Mensal sempre com as duas empresas e total, seleção '+value);
+   assert(JSON.stringify([...monthlyTable.querySelectorAll('thead th')].map(cell=>cell.textContent))===JSON.stringify(['Mês','Ave Nova','Real Alimentos','Total do mês','1º Turno - AN','2º Turno - AN','Total','Turno Único','Total']),'Mensal sempre com as duas empresas e total, seleção '+value);
    assert(monthlyTable.querySelectorAll('[data-cg-month-period]').length===12,'Mensal sempre com os 12 meses, seleção '+value);
    assert(JSON.stringify(values(monthRow))===JSON.stringify(monthlyExpected),'Mensal '+value+': '+values(monthRow));
    assert(JSON.stringify(values(annualRow))===JSON.stringify(monthlyExpected),'Anual '+value);

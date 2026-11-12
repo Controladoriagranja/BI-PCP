@@ -550,10 +550,10 @@ window.PcpCirurgico=(()=>{
     return '<td data-cg-label="'+esc(label)+'"'+(className?' class="'+className+'"':'')+'>'+cellMarkup(item)+'</td>';
    }
    function aveNovaCell(total,periods){
-    return '<td data-cg-label="Ave Nova"><div class="cg-monthly-an-breakdown">'+['1','2'].map(turn=>'<section data-cg-month-turn="'+turn+'"><h4>'+esc(productivityUnitOptions.find(option=>option[0]===turn)[1])+'</h4>'+cellMarkup(summary(turn,periods))+'</section>').join('')+'<section data-cg-month-an-total><h4>Total</h4>'+cellMarkup(total)+'</section></div></td>';
+    return ['1','2'].map(turn=>'<td data-cg-month-turn="'+turn+'" data-cg-label="Ave Nova — '+turn+'º turno">'+cellMarkup(summary(turn,periods))+'</td>').join('')+'<td data-cg-month-an-total data-cg-label="Ave Nova — Total">'+cellMarkup(total)+'</td>';
    }
    const totalColumn=keys.length>1;
-   const html='<table class="cg-table cg-monthly-table cg-monthly-pivot"><caption class="cg-production-sr">Acumulado mensal por empresa, total do mês e totais anuais até D−1</caption><colgroup><col class="cg-monthly-month-col">'+keys.map(()=>'<col>').join('')+(totalColumn?'<col>':'')+'</colgroup><thead><tr><th scope="col">Mês</th>'+keys.map(code=>'<th scope="col">'+esc(headCompanies[code])+'</th>').join('')+(totalColumn?'<th scope="col" class="cg-monthly-total">Total do mês</th>':'')+'</tr></thead><tbody>'+months.map(({year,month})=>{
+   const html='<table class="cg-table cg-monthly-table cg-monthly-pivot cg-monthly-fixed-head"><caption class="cg-production-sr">Acumulado mensal por empresa e turno, total do mês e totais anuais até D−1</caption><colgroup><col class="cg-monthly-month-col"><col><col><col><col><col></colgroup><thead><tr><th scope="col" rowspan="2">Mês</th><th scope="colgroup" colspan="3">Ave Nova</th><th scope="col">Real Alimentos</th><th scope="col">Total do mês</th></tr><tr><th scope="col">1º Turno - AN</th><th scope="col">2º Turno - AN</th><th scope="col">Total</th><th scope="col">Turno Único</th><th scope="col">Total</th></tr></thead><tbody>'+months.map(({year,month})=>{
     const period=year+'-'+String(month).padStart(2,'0'),now=currentMonth();
     const name=new Date(Date.UTC(year,month-1,1)).toLocaleDateString('pt-BR',{month:'long',timeZone:'UTC'});
     const rowClass=period===now?' class="cg-monthly-current"':period>now?' class="cg-monthly-future"':'';

@@ -768,3 +768,18 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pcp-report .api-filter-progress{top:20px;right:20px;bottom:auto;left:auto;margin:0;max-width:calc(100vw - 40px)}
 
 .cg-stops-body .pcp-sort-button{border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;cursor:pointer;padding:3px;white-space:nowrap}.cg-stops-body .pcp-sort-button::after{content:" ↕";color:var(--muted-foreground,#766d70);font-size:8px}.cg-stops-body th[aria-sort="descending"] .pcp-sort-button::after{content:" ↓"}.cg-stops-body th[aria-sort="ascending"] .pcp-sort-button::after{content:" ↑"}.cg-stops-body .pcp-sort-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* Cabeçalho mensal único, com empresas e turnos fixos durante a rolagem. */
+#cgProdutividade .cg-monthly-fixed-head{display:table;min-width:1050px;table-layout:fixed}
+#cgProdutividade .cg-monthly-fixed-head colgroup{display:table-column-group}
+#cgProdutividade .cg-monthly-fixed-head col{display:table-column}
+#cgProdutividade .cg-monthly-fixed-head col:first-child{width:78px}
+#cgProdutividade .cg-monthly-fixed-head col:nth-child(n+2){width:auto}
+#cgProdutividade .cg-monthly-fixed-head thead{display:table-header-group;position:sticky;top:0;z-index:8;background:var(--card)}
+#cgProdutividade .cg-monthly-fixed-head thead tr{display:table-row;height:32px}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{position:static;top:auto;left:auto;height:32px;padding:6px 5px;box-sizing:border-box;background:var(--card);vertical-align:middle}
+#cgProdutividade .cg-monthly-fixed-head tbody{display:table-row-group}
+#cgProdutividade .cg-monthly-fixed-head tbody tr{display:table-row}
+#cgProdutividade .cg-monthly-fixed-head tbody tr>td{display:table-cell;width:auto;border-left:1px solid var(--border);padding:7px;vertical-align:top}
+#cgProdutividade .cg-monthly-fixed-head tbody tr>td::before{display:none}
+#cgProdutividade .cg-monthly-fixed-head tbody tr>th:first-child{display:table-cell;position:sticky;left:0;width:78px;min-width:78px;max-width:78px;vertical-align:middle}

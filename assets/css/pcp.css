@@ -750,3 +750,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .cg-cond-dialog .cg-cond-summary>h3,.cg-cond-dialog .cg-cond-summary>p,.cg-cond-dialog .cg-cond-detail>h3,.cg-cond-dialog .cg-cond-detail>button{flex:none;margin:0}
 .cg-cond-dialog .cg-cond-detail>button,.cg-cond-dialog .cg-cond-groups-back{align-self:flex-start}
 @media(max-width:600px){.pcp-report .cg-dialog.cg-cond-dialog{height:94dvh;max-height:94dvh}.cg-cond-dialog>.cg-stops-body{overflow:auto}}
+
+.cg-stops-view-filter{max-width:420px}.cg-stops-view-filter>label{display:grid;gap:6px;font-size:12px}.cg-stops-view-filter .checkbox-multiselect{position:relative}

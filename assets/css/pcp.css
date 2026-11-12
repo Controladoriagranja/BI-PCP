@@ -787,5 +787,5 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border-color:var(--border);text-align:center}
 
 /* Fecha a divisão de Mês apenas na faixa dos turnos. */
-#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th:nth-child(2){border-left:0}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th:nth-child(n+2){border-left:0}
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{border-left:1px solid var(--border)}

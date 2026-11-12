@@ -38,7 +38,7 @@ window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
   const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
-  return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}})),mensal:[{mes:prefix,valores:{'1':[.08],'2':[.09],'10':[.085],'111':[.087]}}],semanal:[]};
+  return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883},{ordem:15,nome:'Paradas de produção (min)',unidade:'min',meta:30}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),mensal:[{mes:prefix,valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}}],semanal:[]};
  }
  if(endpoint==='/api/pcp/tabelas')return {ok:true,tabelas:['diario_industria','diario_industria_turnos'].map(tabela=>({tabela,colunas:['data_referencia','empresa','empresa_codigo','unidade_codigo','turno_codigo','secao','descricao','quantidade']}))};
  const tabela=endpoint.split('/').pop();
@@ -159,6 +159,11 @@ TEST = r'''
     assert(parse(day3.querySelector('.cg-prod-reference strong'))===-10523,'Somar diferença positiva e negativa sem perder sinais');
     assert(parse(day3.querySelector('.cg-production-day-weight strong'))===589555,'Somar pesos por dia');
    }
+   const stop=document.querySelector('[data-cg-day="2026-11-02"]').closest('td').querySelector('[data-cg-stop]');
+   assert(stop&&stop.dataset.cgDates==='2026-11-02','Parada do dia preserva contexto');
+   const expectedStops={'1':20,'2':35,'10':55,'111':40,'10,111':95};
+   assert(parse(stop.querySelector('strong'))===expectedStops[value],'Minutos conforme unidade e turno');
+   assert(stop.querySelector('strong').classList.contains(['2','111','10,111'].includes(value)?'cg-bad':'cg-good'),'Meta de 30 por turno e Real; 60 Ave Nova');
    results.push({unit:value,...checkLayout(value)});
   }
   // Dia limita o calendário, enquanto o mensal mantém os meses completos do recorte.

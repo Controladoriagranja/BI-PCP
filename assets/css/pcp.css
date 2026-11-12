@@ -813,3 +813,7 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 /* Todas as divisórias dos turnos usam o mesmo traço e os mesmos recuos. */
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border-radius:0}
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{border:0;box-shadow:none;position:static;background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center;background-repeat:no-repeat}
+
+#cgProdutividade .cg-production-grid .cg-calendar-stops{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% - 16px);min-height:0;height:auto;margin:0 8px 7px;padding:5px 0 0;border:0;border-top:1px solid var(--border);border-radius:0;background:transparent;color:var(--muted-foreground);font:inherit;font-size:11px;text-align:left;cursor:pointer}
+#cgProdutividade .cg-production-grid .cg-calendar-stops strong{font-size:12px}
+#cgProdutividade .cg-production-grid .cg-calendar-stops:hover{background:var(--muted)}

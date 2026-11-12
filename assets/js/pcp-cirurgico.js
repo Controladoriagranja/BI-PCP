@@ -370,13 +370,15 @@ window.PcpCirurgico=(()=>{
    const companies=selectedHeadCompanies(calendarUnit()),rows=getHeads().rows.filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
    const weights=(getHeads().pesos||[]).filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
    if(!rows.length&&!weights.length)return [];
-   return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:null},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null}));
+   return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:null},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null,peso_medio:(getHeads().medias||[]).find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??null}));
   }
+  function meanMarkup(value){return '<span class="cg-calendar-mean" title="Peso Médio das aves · Diário da Indústria; totais ponderados pela quantidade de aves"><span>Peso médio (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3}):'—')+'</strong></span>';}
+  function weightedMean(rows){const valid=rows.filter(r=>Number.isFinite(r.peso_medio)&&Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0),count=valid.reduce((n,r)=>n+r.quantidade_cabecas,0);return valid.length===rows.filter(r=>Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0).length&&count?valid.reduce((n,r)=>n+r.peso_medio*r.quantidade_cabecas,0)/count:null;}
   function headsMarkup(rows,showWeight=true){
    rows=displayRows(rows);
    return rows.length?'<span class="cg-production-heads">'+rows.map(row=>{
     const rating=row._rating||productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit());
-    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+(showWeight?productivityWeightMarkup(row.peso_vivo):'')+'</span>';
+    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+meanMarkup(row.peso_medio)+(showWeight?productivityWeightMarkup(row.peso_vivo):'')+'</span>';
    }).join('')+'</span>':'<span class="cg-production-empty" aria-hidden="true">—</span>';
   }
   function stopsMarkup(dates){
@@ -396,7 +398,7 @@ window.PcpCirurgico=(()=>{
    return selectedHeadCompanies(calendarUnit()).map(code=>{
     const values=daily.filter(row=>row.empresa_codigo===code&&row.quantidade_cabecas!=null).map(row=>row.quantidade_cabecas);
     const weights=daily.filter(row=>row.empresa_codigo===code&&row.peso_vivo!=null).map(row=>row.peso_vivo);
-    return {empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:values.length?values.reduce((sum,value)=>sum+value,0):null,peso_vivo:weights.length?weights.reduce((sum,value)=>sum+value,0):null,_days:daily.filter(row=>row.empresa_codigo===code)};
+    return {empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:values.length?values.reduce((sum,value)=>sum+value,0):null,peso_vivo:weights.length?weights.reduce((sum,value)=>sum+value,0):null,peso_medio:weightedMean(daily.filter(row=>row.empresa_codigo===code)),_days:daily.filter(row=>row.empresa_codigo===code)};
    });
   }
   function totalCell(dates,kind,label){
@@ -409,7 +411,7 @@ window.PcpCirurgico=(()=>{
    const value=sum('quantidade_cabecas');
    const ratings=rows.filter(row=>Number.isFinite(row.quantidade_cabecas)).map(row=>productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit()));
    const meta=ratings.length&&ratings.every(rating=>Number.isFinite(rating.meta))?ratings.reduce((total,rating)=>total+rating.meta,0):null;
-   return [{empresa_codigo:'both',empresa:combinedCompanyLabel,quantidade_cabecas:value,peso_vivo:sum('peso_vivo'),_rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}}];
+   return [{empresa_codigo:'both',empresa:combinedCompanyLabel,quantidade_cabecas:value,peso_vivo:sum('peso_vivo'),peso_medio:weightedMean(rows),_rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}}];
   }
   function emptyMessage(date){
    if(date&&getHeads().limit&&date>getHeads().limit)return 'Dados disponíveis até '+getHeads().limit.split('-').reverse().join('/')+' (D−1).';
@@ -676,10 +678,10 @@ window.PcpCirurgico=(()=>{
    headsKey=key;const id=++headsGeneration;headsController?.abort();headsController=new AbortController();
    headsState={status:'loading',rows:[],limit};productivity.render();
    try{
-    const [production,targets,weight]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityTargets.load(apiGet,periods,headsController.signal,fullWeek,limit),productivityWeight.load(apiGet,periods,units,headsController.signal,fullWeek,limit)]);
+    const [production,targets,weight,means]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityTargets.load(apiGet,periods,headsController.signal,fullWeek,limit),productivityWeight.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit,'diario','Peso Médio')]);
     if(production.status==='rejected')throw production.reason;
     if(id!==headsGeneration)return;
-    headsState={status:'ready',rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',limit};
+    headsState={status:'ready',medias:means.status==='fulfilled'?means.value:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',limit};
    }catch(e){
     if(id!==headsGeneration)return;
     headsState={status:'error',rows:[],limit};

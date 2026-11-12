@@ -34,6 +34,7 @@ window.pcpRendimentoSnapshot=()=>{
   update:button?['display','backgroundColor','color','height'].map(key=>getComputedStyle(button)[key]):null
  };
 };
+fixture.rows.push(...fixture.rows.filter(r=>r.descricao==='Cabeças').map(r=>({...r,descricao:'Peso Médio',quantidade:3.125})));
 window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
@@ -126,6 +127,7 @@ TEST = r'''
    const monthRow=document.querySelector('[data-cg-month-period="2026-11"]');
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
+   assert(document.querySelector('.cg-calendar-mean strong')?.textContent==='3,125','Peso Médio usa indicador do diário com três casas');
    const monthlyExpected=[222318,142587,364905];
    const stopValues=[...monthRow.querySelectorAll('.cg-monthly-stops strong')].map(e=>e.textContent);
    assert(JSON.stringify(stopValues)===JSON.stringify(['20 min','35 min','55 min','40 min','95 min']),'Paradas mensais por turno, empresa e geral: '+stopValues);

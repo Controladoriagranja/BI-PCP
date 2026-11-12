@@ -134,7 +134,7 @@ TEST = r'''
    assert(Math.abs(head.getBoundingClientRect().top-scroll.getBoundingClientRect().top)<4,'Cabeçalho permanece visível ao rolar');
    scroll.scrollTop=oldTop;
    const monthlyTable=document.querySelector('.cg-monthly-pivot');
-   assert(JSON.stringify([...monthlyTable.querySelectorAll('thead th')].map(cell=>cell.textContent))===JSON.stringify(['Mês','Ave Nova','Real AlimentosTurno Único','Total Geral','1º Turno - AN','2º Turno - AN','Total']),'Mensal sempre com as duas empresas e total, seleção '+value);
+   assert(JSON.stringify([...monthlyTable.querySelectorAll('thead th')].map(cell=>cell.textContent))===JSON.stringify(['Mês','Ave Nova','Real Alimentos','Total Geral','1º Turno - AN','2º Turno - AN','Total']),'Mensal sempre com as duas empresas e total, seleção '+value);
    assert(monthlyTable.querySelectorAll('[data-cg-month-period]').length===12,'Mensal sempre com os 12 meses, seleção '+value);
    assert(JSON.stringify(values(monthRow))===JSON.stringify(monthlyExpected),'Mensal '+value+': '+values(monthRow));
    assert(JSON.stringify(values(annualRow))===JSON.stringify(monthlyExpected),'Anual '+value);

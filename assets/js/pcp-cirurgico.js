@@ -166,7 +166,8 @@ window.PcpCirurgico=(()=>{
    const catalog=await catalogFor(get,signal);
    if(!catalog.ok||!Array.isArray(catalog.tabelas))throw Error('Catálogo PCP indisponível.');
    const target=new Map(),priorities=new Map();
-   for(const scope of scopes(units,catalog,totalSource)){
+   const batches=await Promise.all(scopes(units,catalog,totalSource).map(async scope=>{
+    const chunks=[];
     const columns=schema(catalog,scope.table),{table,empresas,turno,somarTurno}=scope;
     for(const {inicio,fim} of ranges){
      const weight=metricDescription==='Peso Vivo para Rendimento';
@@ -180,12 +181,14 @@ window.PcpCirurgico=(()=>{
       if(result.total!==expectedTotal||result.dados.length>result.tamanho)throw Error('A fonte de Cabeças mudou durante a consulta. Atualize novamente.');
       received+=result.dados.length;
       if(received>expectedTotal||(received<expectedTotal&&result.dados.length!==result.tamanho))throw Error('Paginação de Cabeças incompleta.');
-      collect(target,priorities,result.dados,columns,{...params,empresas,somarTurno,weight,metricDescription});
+      chunks.push({rows:result.dados,columns,params:{...params,empresas,somarTurno,weight,metricDescription}});
       if(received===expectedTotal)break;
       page++;
      }while(true);
     }
-   }
+    return chunks;
+   }));
+   for(const chunks of batches)for(const chunk of chunks)collect(target,priorities,chunk.rows,chunk.columns,chunk.params);
    return [...target.values()].sort((a,b)=>a.data.localeCompare(b.data)||a.empresa_codigo.localeCompare(b.empresa_codigo));
   }
   return {load};
@@ -553,7 +556,7 @@ window.PcpCirurgico=(()=>{
     return ['1','2'].map(turn=>'<td data-cg-month-turn="'+turn+'" data-cg-label="Ave Nova — '+turn+'º turno">'+cellMarkup(summary(turn,periods))+'</td>').join('')+'<td data-cg-month-an-total data-cg-label="Ave Nova — Total">'+cellMarkup(total)+'</td>';
    }
    const totalColumn=keys.length>1;
-   const html='<table class="cg-table cg-monthly-table cg-monthly-pivot cg-monthly-fixed-head"><caption class="cg-production-sr">Acumulado mensal por empresa e turno, total do mês e totais anuais até D−1</caption><colgroup><col class="cg-monthly-month-col"><col><col><col><col><col></colgroup><thead><tr><th scope="col" rowspan="2">Mês</th><th scope="colgroup" colspan="3">Ave Nova</th><th scope="col" rowspan="2" class="cg-monthly-company-single">Real Alimentos<br><span>Turno Único</span></th><th scope="col" rowspan="2" class="cg-monthly-overall-heading">Total Geral</th></tr><tr><th scope="col">1º Turno - AN</th><th scope="col">2º Turno - AN</th><th scope="col">Total</th></tr></thead><tbody>'+months.map(({year,month})=>{
+   const html='<table class="cg-table cg-monthly-table cg-monthly-pivot cg-monthly-fixed-head"><caption class="cg-production-sr">Acumulado mensal por empresa e turno, total do mês e totais anuais até D−1</caption><colgroup><col class="cg-monthly-month-col"><col><col><col><col><col></colgroup><thead><tr><th scope="col" rowspan="2">Mês</th><th scope="colgroup" colspan="3">Ave Nova</th><th scope="col" rowspan="2" class="cg-monthly-company-single">Real Alimentos</th><th scope="col" rowspan="2" class="cg-monthly-overall-heading">Total Geral</th></tr><tr><th scope="col">1º Turno - AN</th><th scope="col">2º Turno - AN</th><th scope="col">Total</th></tr></thead><tbody>'+months.map(({year,month})=>{
     const period=year+'-'+String(month).padStart(2,'0'),now=currentMonth();
     const name=new Date(Date.UTC(year,month-1,1)).toLocaleDateString('pt-BR',{month:'long',timeZone:'UTC'});
     const rowClass=period===now?' class="cg-monthly-current"':period>now?' class="cg-monthly-future"':'';

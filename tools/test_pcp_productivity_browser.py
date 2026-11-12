@@ -38,7 +38,7 @@ window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
   const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
-  return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883},{ordem:15,nome:'Paradas de produção (min)',unidade:'min',meta:30}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),mensal:[{mes:prefix,valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}}],semanal:[]};
+  return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883},{ordem:15,nome:'Paradas de produção (min)',unidade:'min',meta:30}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),mensal:String(p.mes||11).split(',').map(m=>({mes:ano+'-'+String(m).padStart(2,'0'),metas_paradas:{'1':240,'2':240,'10':480,'111':240},valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),semanal:[]};
  }
  if(endpoint==='/api/pcp/tabelas')return {ok:true,tabelas:['diario_industria','diario_industria_turnos'].map(tabela=>({tabela,colunas:['data_referencia','empresa','empresa_codigo','unidade_codigo','turno_codigo','secao','descricao','quantidade']}))};
  const tabela=endpoint.split('/').pop();
@@ -127,6 +127,9 @@ TEST = r'''
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
    const monthlyExpected=[222318,142587,364905];
+   const stopValues=[...monthRow.querySelectorAll('.cg-monthly-stops strong')].map(e=>e.textContent);
+   assert(JSON.stringify(stopValues)===JSON.stringify(['20 min','35 min','55 min','40 min','95 min']),'Paradas mensais por turno, empresa e geral: '+stopValues);
+   assert(monthRow.querySelectorAll('[data-cg-periods="2026-11"]').length===5,'Clique mensal preserva período');
    assert(monthRow.children.length===6,'Seis colunas alinhadas entre meses');
    assert(!monthRow.querySelector('h4'),'Turnos não se repetem nas linhas');
    const scroll=monthRow.closest('.cg-monthly-scroll'),head=scroll.querySelector('thead');
@@ -170,7 +173,7 @@ TEST = r'''
    }
    const expectedStops={'1':20,'2':35,'10':55,'111':40,'10,111':95};
    assert(parse(stop.querySelector('strong'))===expectedStops[value],'Minutos conforme unidade e turno');
-   assert(stop.querySelector('strong').classList.contains(['2','111','10,111'].includes(value)?'cg-bad':'cg-good'),'Meta de 30 por turno e Real; 60 Ave Nova');
+   assert(stop.querySelector('strong').classList.contains(['2','111','10,111'].includes(value)?'cg-prod-bad':'cg-prod-good'),'Meta de 30 por turno e Real; 60 Ave Nova');
    results.push({unit:value,...checkLayout(value)});
   }
   // Dia limita o calendário, enquanto o mensal mantém os meses completos do recorte.

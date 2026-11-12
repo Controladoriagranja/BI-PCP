@@ -388,7 +388,7 @@ window.PcpCirurgico=(()=>{
    const complete=blocks.every(b=>b&&keys.every(k=>Number.isFinite(b.valores?.[k]?.[14])));
    if(!complete)return '<span class="cg-calendar-stops"><span>Paradas (min)</span><span>—</span></span>';
    const minutes=blocks.reduce((sum,b)=>sum+keys.reduce((n,k)=>n+b.valores[k][14],0),0),target=blocks.reduce((sum,b)=>sum+keys.reduce((n,k)=>n+(b.metas_paradas?.[k]??(k==='10'?60:30)),0),0);
-   return '<button type="button" class="cg-calendar-stops" data-cg-stop="'+(keys.length===1?keys[0]:'geral')+'" data-cg-date="'+days[0]+'" data-cg-dates="'+days.join(',')+'" title="Ver resumo e ocorrências de paradas · Meta: '+target+' min"><span>Paradas (min)</span><strong class="'+(minutes<=target?'cg-good':'cg-bad')+'">'+minutes.toLocaleString('pt-BR')+' min</strong></button>';
+   return '<button type="button" class="cg-calendar-stops" data-cg-stop="'+(keys.length===1?keys[0]:'geral')+'" data-cg-date="'+days[0]+'" data-cg-dates="'+days.join(',')+'" title="Ver resumo e ocorrências de paradas · Meta: '+target+' min"><span>Paradas (min)</span><strong class="'+(minutes<=target?'cg-prod-good':'cg-prod-bad')+'">'+minutes.toLocaleString('pt-BR')+' min</strong></button>';
   }
   function totals(dates){
    if(getHeads().status!=='ready'||!PcpMulti.includes(fields.Grupo?.value,'producao'))return [];
@@ -548,17 +548,22 @@ window.PcpCirurgico=(()=>{
    function summary(code,periods){
     const entries=periods.map(period=>code+'|'+period),rows=entries.flatMap(key=>dailyRows.get(key)||[]);
     const sum=map=>{const values=entries.map(key=>map.get(key)).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
-    return {value:sum(sums),weight:sum(weights),rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
+    const stopPeriods=periods.filter(period=>!data.limit||period<=data.limit.slice(0,7)),stopBlocks=stopPeriods.map(period=>(data.paradas||[]).find(b=>b.mes===period));
+    const complete=stopBlocks.length&&stopBlocks.every(b=>Number.isFinite(b?.valores?.[code]?.[14])&&Number.isFinite(b?.metas_paradas?.[code]));
+    const stops={minutes:complete?stopBlocks.reduce((n,b)=>n+b.valores[code][14],0):null,target:complete?stopBlocks.reduce((n,b)=>n+b.metas_paradas[code],0):null,periods:stopPeriods,view:code};
+    return {value:sum(sums),weight:sum(weights),stops,rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
    }
    function combined(items){
     const sum=field=>{const values=items.map(item=>item[field]).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
     const actual=items.filter(item=>Number.isFinite(item.value)),value=sum('value');
     const meta=actual.length&&actual.every(item=>Number.isFinite(item.rating.meta))?actual.reduce((total,item)=>total+item.rating.meta,0):null;
-    return {value,weight:sum('weight'),rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
+    const complete=items.every(item=>Number.isFinite(item.stops?.minutes)),stops={minutes:complete?items.reduce((n,item)=>n+item.stops.minutes,0):null,target:complete?items.reduce((n,item)=>n+item.stops.target,0):null,periods:items[0]?.stops?.periods||[],view:'geral'};
+    return {value,weight:sum('weight'),stops,rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
    }
-   function cellMarkup({value,weight,rating}){
+   function cellMarkup({value,weight,rating,stops}){
     const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
-    return productivityWeightMarkup(weight)+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating);
+    const stopsHTML=stops?.periods?.length?'<button type="button" class="cg-monthly-stops" data-cg-stop="'+stops.view+'" data-cg-date="'+stops.periods[0]+'" data-cg-monthly="true" data-cg-periods="'+stops.periods.join(',')+'" title="Ver resumo e ocorrências de paradas"><span>Paradas (min)</span><strong'+(stops.minutes==null?'':' class="'+(stops.minutes<=stops.target?'cg-prod-good':'cg-prod-bad')+'"')+'>'+esc(stops.minutes==null?'—':stops.minutes.toLocaleString('pt-BR')+' min')+'</strong></button>':'';
+    return productivityWeightMarkup(weight)+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+stopsHTML;
    }
    function cell(item,className='',label=''){
     return '<td data-cg-label="'+esc(label)+'"'+(className?' class="'+className+'"':'')+'>'+cellMarkup(item)+'</td>';
@@ -692,10 +697,10 @@ window.PcpCirurgico=(()=>{
    monthlyKey=key;const id=++monthlyGeneration;monthlyController?.abort();monthlyController=new AbortController();
    monthlyState={status:'loading',rows:[],limit};monthly.render();
    try{
-    const [production,targets,weight,turns,turnWeights]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit)]);
+    const [production,targets,weight,turns,turnWeights,stops]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit),apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:[...new Set(periods.map(p=>p.year))].join(','),mes:'1,2,3,4,5,6,7,8,9,10,11,12'},{silent:true,signal:monthlyController.signal})]);
     if(production.status==='rejected')throw production.reason;
     if(id!==monthlyGeneration)return;
-    monthlyState={status:'ready',rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
+    monthlyState={status:'ready',paradas:stops.status==='fulfilled'?stops.value.mensal:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
    }catch(e){
     if(id!==monthlyGeneration)return;
     monthlyState={status:'error',rows:[],limit};
@@ -748,7 +753,7 @@ window.PcpCirurgico=(()=>{
   function openCond(overrides={}){const selected=selectedColumns();condDetails.open({ano:data.ano,mes:data.mes,dias:fields.Dia.value,visao:selected.length===1?selected[0]:'geral',...overrides});}
   function openStops(overrides={}){const selected=selectedColumns();stopDetails.open({ano:data.ano,mes:data.mes,dias:fields.Dia.value,visao:selected.length===1?selected[0]:'geral',...overrides});}
   function openLine(order){if(!data)return;activeIndicator=order;mobileLinePeriod='';if(!dialog.open)dialog.showModal();renderLine();}
-  content.addEventListener('click',event=>{const button=event.target.closest('[data-cg-indicator]');if(button){if(Number(button.dataset.cgIndicator)===15)openStops();else if(Number(button.dataset.cgIndicator)===11)openCond();else openLine(Number(button.dataset.cgIndicator));}const cond=event.target.closest('[data-cg-cond]');if(cond){const v=cond.dataset.cgDate;openCond({ano:v.slice(0,4),mes:String(Number(v.slice(5,7))),dias:cond.dataset.cgMonthly==='true'?undefined:v,visao:cond.dataset.cgCond});}const cell=event.target.closest('[data-cg-stop]');if(cell){const v=cell.dataset.cgDate;openStops({ano:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>d.slice(0,4)))].join(','):v.slice(0,4),mes:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>String(Number(d.slice(5,7)))))].join(','):String(Number(v.slice(5,7))),dias:cell.dataset.cgDates||(cell.dataset.cgMonthly==='true'?undefined:v),visao:cell.dataset.cgStop});}});
+  content.addEventListener('click',event=>{const button=event.target.closest('[data-cg-indicator]');if(button){if(Number(button.dataset.cgIndicator)===15)openStops();else if(Number(button.dataset.cgIndicator)===11)openCond();else openLine(Number(button.dataset.cgIndicator));}const cond=event.target.closest('[data-cg-cond]');if(cond){const v=cond.dataset.cgDate;openCond({ano:v.slice(0,4),mes:String(Number(v.slice(5,7))),dias:cond.dataset.cgMonthly==='true'?undefined:v,visao:cond.dataset.cgCond});}const cell=event.target.closest('[data-cg-stop]');if(cell){const v=cell.dataset.cgDate;if(cell.dataset.cgPeriods){const periods=cell.dataset.cgPeriods.split(',');openStops({ano:[...new Set(periods.map(p=>p.slice(0,4)))].join(','),mes:[...new Set(periods.map(p=>String(Number(p.slice(5,7)))))].join(','),dias:undefined,visao:cell.dataset.cgStop});return;}openStops({ano:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>d.slice(0,4)))].join(','):v.slice(0,4),mes:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>String(Number(d.slice(5,7)))))].join(','):String(Number(v.slice(5,7))),dias:cell.dataset.cgDates||(cell.dataset.cgMonthly==='true'?undefined:v),visao:cell.dataset.cgStop});}});
   dialog.querySelector('.cg-dialog-close').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{if(!dialog.open){activeIndicator=null;graphFilters.closeAll();dialog.classList.remove('cg-maximized');const maximize=dialog.querySelector('#cgMaximizar');maximize.textContent='Maximizar';maximize.setAttribute('aria-pressed','false');if(document.fullscreenElement===dialog)document.exitFullscreen().catch(()=>{});}});dialog.addEventListener('click',event=>{const r=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))dialog.close();});
   dialog.querySelector('#cgMaximizar').onclick=()=>{graphFilters.closeAll();const expanded=dialog.classList.toggle('cg-maximized');const button=dialog.querySelector('#cgMaximizar');button.textContent=expanded?'Restaurar':'Maximizar';button.setAttribute('aria-pressed',String(expanded));if(expanded&&dialog.requestFullscreen){dialog.requestFullscreen().catch(()=>{});}else if(!expanded&&document.fullscreenElement===dialog){document.exitFullscreen().catch(()=>{});}requestAnimationFrame(()=>{lineChart?.resize();renderLine();});};
   const chartObserver=new ResizeObserver(()=>renderLine());chartObserver.observe(chartEl);

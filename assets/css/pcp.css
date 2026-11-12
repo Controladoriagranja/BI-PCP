@@ -791,3 +791,9 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{border-left:1px solid var(--border)}
 
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th[rowspan="2"]{vertical-align:bottom;padding-bottom:8px}
+
+/* Empresas e consolidado em células próprias, com divisórias contínuas. */
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-company-single,
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-overall-heading{border-left:1px solid var(--border);vertical-align:middle;padding:6px 5px}
+#cgProdutividade .cg-monthly-company-single>span{display:inline-block;margin-top:8px}
+#cgProdutividade .cg-monthly-fixed-head td>.cg-prod-weight:first-child{margin-left:-7px;margin-right:-7px;padding-left:7px;padding-right:7px}

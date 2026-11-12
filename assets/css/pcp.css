@@ -822,3 +822,9 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-production-grid td>.cg-calendar-stops{display:flex;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:6px;min-height:0;height:auto;border:0;border-top:0;padding:0;text-align:left}
 #cgProdutividade .cg-production-grid td>.cg-calendar-stops>span{display:inline;flex:0 1 auto;text-align:left}
 #cgProdutividade .cg-production-grid td>.cg-calendar-stops>strong{display:inline;flex:0 0 auto;text-align:right;margin:0}
+
+/* Paradas usa a tipografia e os recuos de Meta e Diferença. */
+#cgProdutividade .cg-production-grid td:has(>.cg-calendar-stops)>button[data-cg-day]{padding-bottom:0}
+#cgProdutividade .cg-production-grid td>.cg-calendar-stops{margin-top:1px;margin-bottom:6px;font-size:12px;line-height:1.3;align-items:baseline;color:var(--muted-foreground)}
+#cgProdutividade .cg-production-grid td>.cg-calendar-stops>strong{font-size:12px;font-weight:650;line-height:1.3}
+#cgProdutividade .cg-production-grid td.cg-production-total>.cg-calendar-stops{width:100%;margin:1px 0 0}

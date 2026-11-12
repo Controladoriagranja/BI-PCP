@@ -161,6 +161,13 @@ TEST = r'''
    }
    const stop=document.querySelector('[data-cg-day="2026-11-02"]').closest('td').querySelector('[data-cg-stop]');
    assert(stop&&stop.dataset.cgDates==='2026-11-02','Parada do dia preserva contexto');
+   for(const stopRow of document.querySelectorAll('.cg-calendar-stops[data-cg-stop]')){
+    const cell=stopRow.closest('td'),reference=cell.querySelector('.cg-prod-reference>span:last-child');
+    if(!reference)continue;
+    assert(Math.abs(stopRow.firstElementChild.getBoundingClientRect().left-reference.firstElementChild.getBoundingClientRect().left)<2,'Paradas alinhada à esquerda com Diferença');
+    assert(Math.abs(stopRow.lastElementChild.getBoundingClientRect().right-reference.lastElementChild.getBoundingClientRect().right)<2,'Minutos alinhados à direita com Diferença');
+    assert(getComputedStyle(stopRow).fontSize===getComputedStyle(reference).fontSize,'Fonte igual à referência');
+   }
    const expectedStops={'1':20,'2':35,'10':55,'111':40,'10,111':95};
    assert(parse(stop.querySelector('strong'))===expectedStops[value],'Minutos conforme unidade e turno');
    assert(stop.querySelector('strong').classList.contains(['2','111','10,111'].includes(value)?'cg-bad':'cg-good'),'Meta de 30 por turno e Real; 60 Ave Nova');

@@ -752,3 +752,15 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 @media(max-width:600px){.pcp-report .cg-dialog.cg-cond-dialog{height:94dvh;max-height:94dvh}.cg-cond-dialog>.cg-stops-body{overflow:auto}}
 
 .cg-stops-view-filter{max-width:420px}.cg-stops-view-filter>label{display:grid;gap:6px;font-size:12px}.cg-stops-view-filter .checkbox-multiselect{position:relative}
+
+/* Paradas: tamanho estável durante filtros e consultas, como Condenações. */
+.pcp-report .cg-dialog.cg-production-stops-dialog{height:94dvh;max-height:94dvh;overflow:hidden}
+.pcp-report .cg-dialog.cg-production-stops-dialog[open]{display:flex;flex-direction:column}
+.cg-production-stops-dialog>.cg-stops-header{flex:none}
+.cg-production-stops-dialog>.cg-stops-body{display:flex;flex-direction:column;flex:1;min-height:0;overflow:visible}
+.cg-production-stops-dialog .cg-stops-view-filter,.cg-production-stops-dialog .cg-stops-status{flex:none}
+.cg-production-stops-dialog .cg-stops-body>section:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;gap:10px}
+.cg-production-stops-dialog .cg-stops-summary,.cg-production-stops-dialog .cg-stops-details{flex:1;min-height:0;max-height:none;overflow:auto}
+.cg-production-stops-dialog h3,.cg-production-stops-dialog .cg-stops-back{flex:none;margin:0}
+.cg-production-stops-dialog .cg-stops-back{align-self:flex-start}
+@media(max-width:600px){.pcp-report .cg-dialog.cg-production-stops-dialog{height:94dvh;max-height:94dvh}.cg-production-stops-dialog>.cg-stops-body{overflow:auto}}

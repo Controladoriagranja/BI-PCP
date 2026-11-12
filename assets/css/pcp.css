@@ -796,3 +796,9 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-company-single,
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-overall-heading{border-left:1px solid var(--border);vertical-align:middle;padding:6px 5px}
 #cgProdutividade .cg-monthly-company-single>span{display:inline-block;margin-top:8px}
+
+/* Divisórias do cabeçalho com o mesmo respiro das linhas internas. */
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border:0;background-color:var(--card);background-image:linear-gradient(var(--border),var(--border));background-repeat:no-repeat;background-size:calc(100% - 14px) 1px;background-position:center bottom}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th,
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-company-single,
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-overall-heading{border-left:0;background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center}

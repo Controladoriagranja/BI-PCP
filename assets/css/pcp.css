@@ -802,3 +802,10 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th,
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-company-single,
 #cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th.cg-monthly-overall-heading{border-left:0;background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center}
+
+/* Uma única linha recuada por célula, sem contorno contínuo sobreposto. */
+#cgProdutividade .cg-monthly-fixed-head thead,
+#cgProdutividade .cg-monthly-fixed-head thead tr{border:0;box-shadow:none}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr>th{border-bottom:0;box-shadow:none}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:nth-child(2)>th:first-child{background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px,1px calc(100% - 14px);background-position:center bottom,left center;background-repeat:no-repeat}
+#cgProdutividade .cg-monthly-table.cg-monthly-fixed-head thead tr:first-child>th:first-child{background-image:linear-gradient(var(--border),var(--border));background-size:calc(100% - 14px) 1px;background-position:center bottom;background-repeat:no-repeat}

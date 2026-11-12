@@ -817,3 +817,8 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade .cg-production-grid .cg-calendar-stops{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% - 16px);min-height:0;height:auto;margin:0 8px 7px;padding:5px 0 0;border:0;border-top:1px solid var(--border);border-radius:0;background:transparent;color:var(--muted-foreground);font:inherit;font-size:11px;text-align:left;cursor:pointer}
 #cgProdutividade .cg-production-grid .cg-calendar-stops strong{font-size:12px}
 #cgProdutividade .cg-production-grid .cg-calendar-stops:hover{background:var(--muted)}
+
+/* Paradas na mesma linha dos demais valores, sem divisória. */
+#cgProdutividade .cg-production-grid td>.cg-calendar-stops{display:flex;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:6px;min-height:0;height:auto;border:0;border-top:0;padding:0;text-align:left}
+#cgProdutividade .cg-production-grid td>.cg-calendar-stops>span{display:inline;flex:0 1 auto;text-align:left}
+#cgProdutividade .cg-production-grid td>.cg-calendar-stops>strong{display:inline;flex:0 0 auto;text-align:right;margin:0}

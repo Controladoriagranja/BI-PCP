@@ -29,11 +29,16 @@ const ApiActivity = (() => {
       notice.id = "apiFilterProgress";
       notice.className = "api-filter-progress hidden";
       notice.setAttribute("role", "status");
+      if (typeof notice.showPopover === "function") notice.setAttribute("popover", "manual");
       notice.setAttribute("aria-live", "polite");
       notice.textContent = "Aplicando filtros…";
       document.body.appendChild(notice);
     }
     notice.classList.toggle("hidden", pending === 0);
+    if (notice.hasAttribute("popover")) {
+      if (pending > 0 && !notice.matches(":popover-open")) notice.showPopover();
+      else if (pending === 0 && notice.matches(":popover-open")) notice.hidePopover();
+    }
   }
   return { begin() {
     pending++; update();
@@ -43,7 +48,8 @@ const ApiActivity = (() => {
 })();
 
 async function apiGet(endpoint, params = {}, options = {}) {
-  const finish = options.silent ? () => {} : ApiActivity.begin();
+  const pcpData = String(endpoint).startsWith("/api/pcp/") && !String(endpoint).endsWith("/health");
+  const finish = options.silent && !pcpData ? () => {} : ApiActivity.begin();
   try { return await requestApi(endpoint, params, options); }
   finally { finish(); }
 }

@@ -763,6 +763,17 @@ window.PcpCirurgico=(()=>{
   dialog.querySelector('#cgMaximizar').onclick=()=>{graphFilters.closeAll();const expanded=dialog.classList.toggle('cg-maximized');const button=dialog.querySelector('#cgMaximizar');button.textContent=expanded?'Restaurar':'Maximizar';button.setAttribute('aria-pressed',String(expanded));if(expanded&&dialog.requestFullscreen){dialog.requestFullscreen().catch(()=>{});}else if(!expanded&&document.fullscreenElement===dialog){document.exitFullscreen().catch(()=>{});}requestAnimationFrame(()=>{lineChart?.resize();renderLine();});};
   const chartObserver=new ResizeObserver(()=>renderLine());chartObserver.observe(chartEl);
   const now=new Date();fields.Ano.innerHTML='<option>'+now.getFullYear()+'</option>';fields.Mes.value=now.getMonth()+1;
+  const overviewEntry=new URLSearchParams(location.search);let overviewPending=overviewEntry.has('indicador');
+  if(overviewPending){
+   const start=overviewEntry.get('data_inicio'),end=overviewEntry.get('data_fim');
+   if(/^\d{4}-\d{2}-\d{2}$/.test(start||'')&&/^\d{4}-\d{2}-\d{2}$/.test(end||'')){
+    fields.Ano.innerHTML='<option>'+start.slice(0,4)+'</option>';fields.Mes.value=Number(start.slice(5,7));
+    const days=[];for(let d=new Date(start+'T12:00:00Z');d<=new Date(end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1))days.push(d.toISOString().slice(0,10));
+    fields.Dia.innerHTML=days.map(d=>'<option value="'+d+'">'+d+'</option>').join('');fields.Dia.value=days.join(',');
+   }
+   fields.Unidade.value=['10','111'].includes(overviewEntry.get('unidade'))?overviewEntry.get('unidade'):'';
+  }
+
   function scrollTablesToLatest(){for(const id of ['cgDiario','cgMensal']){const element=document.getElementById(id);if(mobile&&element.querySelector('table')){const cells=element.querySelector('thead tr')?.cells,fixed=cells?cells[0].getBoundingClientRect().width+cells[1].getBoundingClientRect().width:140,count=selectedColumns().length,width=Math.max(30,(element.clientWidth-fixed)/count);const table=element.querySelector('table');table.style.setProperty('--cg-day-column',width+'px');table.style.width=(fixed+(table.querySelectorAll('col').length-2)*width)+'px';table.querySelectorAll('col').forEach((col,i)=>{if(i>1)col.style.width=width+'px';});PcpMobileScroll.table(element,{latest:true,snap:count*width});}element.scrollLeft=element.scrollWidth;}}
   if(mobile)document.querySelector('#cgDiario').previousElementSibling.insertAdjacentHTML('beforeend','<p class="ef-mobile-units">AN · Ave Nova &nbsp; / &nbsp; RA · Real Alimentos<br>1º / 2º · Turnos da Ave Nova</p>');
   const tableObserver=new ResizeObserver(()=>scrollTablesToLatest());for(const id of ['cgDiario','cgMensal'])tableObserver.observe(document.getElementById(id));
@@ -793,7 +804,7 @@ window.PcpCirurgico=(()=>{
     const keepDay=requestedDay&&PcpMulti.values(day).includes(requestedDay)&&requestedDay<=result.data_limite?requestedDay:null;
     if(keepDay&&!result.dias.some(d=>d.data===keepDay))fields.Dia.innerHTML+='<option value="'+keepDay+'">'+keepDay.split('-').reverse().join('/')+'</option>';
     fields.Dia.value=PcpMulti.values(day).filter(v=>result.dias.some(d=>d.data===v)||v===keepDay).join(',');
-    render();PcpReportHeader.update(result.ultima_atualizacao);document.getElementById('mensagemErro').classList.add('hidden');document.getElementById('estadoConsulta').textContent='Dados reais · até '+result.data_limite.split('-').reverse().join('/')+' (D−1)';
+    render();if(overviewPending){overviewPending=false;const metric=overviewEntry.get('indicador');if(metric==='paradas')openStops();else if(metric==='rendimento')openLine(14);else if(['produtividade','aves_media'].includes(metric))selectIndicatorMode('produtividade');}PcpReportHeader.update(result.ultima_atualizacao);document.getElementById('mensagemErro').classList.add('hidden');document.getElementById('estadoConsulta').textContent='Dados reais · até '+result.data_limite.split('-').reverse().join('/')+' (D−1)';
    }catch(e){if(id!==generation||e.name==='AbortError')return;if(e.status===401||e.status===403){data=null;lineChart?.clear();if(dialog.open)dialog.close();document.getElementById('cgDiario').replaceChildren();document.getElementById('cgMensal').replaceChildren();}const error=document.getElementById('mensagemErro');error.textContent='Não foi possível atualizar o comparativo. '+(data?'A última consulta permanece visível.':'');error.classList.remove('hidden');}
    finally{if(id===generation){loading=false;productivity.render();}}
   }

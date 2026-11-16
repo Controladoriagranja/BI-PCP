@@ -881,3 +881,9 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pa-plan-only .pa-director-toggle input{width:14px;height:14px;accent-color:#801426;padding:0}
 @media(max-width:1400px){.pa-plan-only .pa-filter-grid{grid-template-columns:repeat(3,minmax(130px,1fr))}.pa-plan-only .pa-filter-grid h2{display:none}.pa-plan-only .pa-filter-grid>div:last-child{grid-column:auto}.pa-plan-only .pa-filter-grid label:last-child{grid-column:auto}}
 @media(max-width:650px){.pa-plan-only .pa-filter-grid{grid-template-columns:1fr 1fr}.pa-plan-only .pa-filter-grid>div:last-child{grid-column:1/-1;flex-wrap:wrap}}
+
+/* Comparativo: desvio relativo a meta, faixas 1% e 3%. */
+.pcp-report .cg-table td.cg-warning{color:#9a7200}
+.pcp-report .cg-table td.cg-orange{color:#c45b10}
+:root[data-theme="dark"] .pcp-report .cg-table td.cg-warning{color:#f2d65f}
+:root[data-theme="dark"] .pcp-report .cg-table td.cg-orange{color:#ffa45b}

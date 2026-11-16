@@ -17,7 +17,7 @@ window.PcpEstoquePA=(()=>{
   }
   const fields={data:document.getElementById(planOnly?'paFim':'paData'),unidade:document.getElementById('paUnidade'),produto:document.getElementById('paProduto')};const initial=new URLSearchParams(location.search);fields.unidade.value=initial.get('unidade')&&PcpMulti.values(initial.get('unidade')).every(u=>['10','111'].includes(u))?initial.get('unidade'):initial.get('pagina')==='2'?'111':'10';let followLatest=!planOnly,generation=0,controller=null,loading=false,lastConfirmed=null,lastData=null,searchTimer=null;
   if(planOnly){document.getElementById('paInicio').value=entry.get('inicio')||'';fields.data.value=entry.get('fim')||'';}
-  const expandedFamilies=new Set();
+  const expandedFamilies=new Set(),familySort={key:'familia',desc:false};
   const sorting={estoque:{key:'acima_capacidade',desc:true},plano:{key:'diferenca_percentual',desc:true}};
   const columns={estoque:[['produto','Produto em estoque',v=>v],['estoque_kg','Estoque (kg)',number],['sequestro_kg','Sequestro (kg)',number],['percentual_sequestro','% Sequestro',v=>percent(v,2)],['limite_kg','Limite (kg)',number],['acima_capacidade','Acima da capacidade',percent]],plano:[['produto','Plano de produção · Produto',v=>v],['pmp_kg','PMP (kg)',number],['producao_kg','Produção (kg)',number],['diferenca_kg','Diferença (kg)',number],['diferenca_percentual','Diferença (%)',percent]]};
   if(planOnly)columns.plano=[['data','Dia',date],['unidade','Unidade',v=>v],...columns.plano,['situacao','Tolerância (±5%)',v=>v]];
@@ -33,13 +33,17 @@ window.PcpEstoquePA=(()=>{
    const box=document.getElementById('paPlano'),cols=columns.plano,sort=sorting.plano;
    const compare=(a,b)=>{const av=a[sort.key],bv=b[sort.key];const n=typeof av==='number'?av-bv:String(av??'').localeCompare(String(bv??''),'pt-BR',{numeric:true});return sort.desc?-n:n;};
    const groups=new Map();rows.filter(r=>PcpMulti.includes(fields.produto.value,r.produto)&&PcpMulti.includes(document.getElementById('paTolerancia').value,r.dentro_tolerancia?'dentro':'fora')).forEach(r=>{const name=r.familia||'OUTROS';if(!groups.has(name))groups.set(name,[]);groups.get(name).push(r);});
-   box.querySelector('thead').innerHTML='<tr>'+['Família','Produtos/dia','Dentro da tolerância','Fora da tolerância','Aderência (%)','PMP (kg)','Produção (kg)'].map(t=>'<th scope="col">'+esc(t)+'</th>').join('')+'</tr>';
-   box.querySelector('tbody').innerHTML=[...groups].sort(([a],[b])=>a.localeCompare(b,'pt-BR')).map(([name,items])=>{
+   const familyCols=[['familia','Família'],['total','Produtos/dia'],['dentro','Dentro da tolerância'],['fora','Fora da tolerância'],['aderencia','Aderência (%)'],['pmp','PMP (kg)'],['producao','Produção (kg)']];
+   const summaries=[...groups].map(([name,items])=>{const dentro=items.filter(r=>r.dentro_tolerancia).length;return {familia:name,items,total:items.length,dentro,fora:items.length-dentro,aderencia:dentro/items.length,pmp:items.reduce((n,r)=>n+r.pmp_kg,0),producao:items.reduce((n,r)=>n+r.producao_kg,0)};});
+   summaries.sort((a,b)=>{const key=familySort.key,av=a[key],bv=b[key];let cmp=typeof av==='number'?av-bv:av.localeCompare(bv,'pt-BR',{numeric:true});if(cmp)return familySort.desc?-cmp:cmp;return a.familia.localeCompare(b.familia,'pt-BR');});
+   box.querySelector('thead').innerHTML='<tr>'+familyCols.map(([key,label])=>'<th scope="col" aria-sort="'+(familySort.key===key?(familySort.desc?'descending':'ascending'):'none')+'"><button type="button" data-family-sort="'+key+'">'+esc(label)+(familySort.key===key?(familySort.desc?' ↓':' ↑'):' ↕')+'</button></th>').join('')+'</tr>';
+   box.querySelector('tbody').innerHTML=summaries.map(({familia:name,items})=>{
     const inside=items.filter(r=>r.dentro_tolerancia).length,opened=expandedFamilies.has(name);
     let html='<tr class="pa-family"><th scope="row"><button type="button" data-family="'+esc(name)+'" aria-expanded="'+opened+'">'+(opened?'▾ ':'▸ ')+esc(name)+'</button></th><td>'+number(items.length)+'</td><td>'+number(inside)+'</td><td>'+number(items.length-inside)+'</td><td>'+percent(inside/items.length,2)+'</td><td>'+number(items.reduce((n,r)=>n+r.pmp_kg,0))+'</td><td>'+number(items.reduce((n,r)=>n+r.producao_kg,0))+'</td></tr>';
     if(opened)html+='<tr class="pa-family-detail"><td colspan="7"><table class="pa-table"><thead><tr>'+cols.map(([key,label])=>'<th><button type="button" data-detail-sort="'+key+'">'+esc(label)+(sort.key===key?(sort.desc?' ↓':' ↑'):' ↕')+'</button></th>').join('')+'</tr></thead><tbody>'+[...items].sort(compare).map(r=>'<tr>'+cols.map(([key,,fmt])=>'<td>'+esc(fmt(r[key]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></td></tr>';
     return html;
    }).join('')||'<tr><td colspan="7">Nenhum produto planejado nos filtros selecionados.</td></tr>';
+   box.querySelectorAll('[data-family-sort]').forEach(b=>b.onclick=()=>{const key=b.dataset.familySort;familySort.desc=familySort.key===key?!familySort.desc:key!=='familia';familySort.key=key;drawFamilies(rows);});
    box.querySelectorAll('[data-family]').forEach(b=>b.onclick=()=>{const f=b.dataset.family;expandedFamilies.has(f)?expandedFamilies.delete(f):expandedFamilies.add(f);drawFamilies(rows);});
    box.querySelectorAll('[data-detail-sort]').forEach(b=>b.onclick=()=>{const key=b.dataset.detailSort;sort.desc=sort.key===key?!sort.desc:true;sort.key=key;drawFamilies(rows);});
   }

@@ -870,3 +870,8 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pa-plan-only #paPlano>.pa-table>thead{position:sticky;top:0;z-index:5}
 .pa-plan-only #paPlano .pa-family-detail .pa-table thead{position:sticky;top:var(--pa-family-header-height,54px);z-index:4;background:var(--card,#fff)}
 .pa-plan-only #paPlano .pa-family-detail .pa-table thead th{background:var(--card,#fff)}
+
+.pa-plan-only #paAtualizar{background:#801426;border:1px solid #801426;color:#fff;font-weight:600;border-radius:7px;padding:0 14px}
+.pa-plan-only #paAtualizar:hover{background:#681020;border-color:#681020}
+.pa-plan-only #paLimpar{background:var(--card,#fff);border:1px solid var(--border,#ded8d0);color:var(--foreground,#342725);border-radius:7px;padding:0 14px}
+.pa-plan-only #paLimpar:hover,.pa-plan-only .pa-back:hover{background:var(--muted,#f7f5f1)}

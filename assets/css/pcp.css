@@ -865,3 +865,8 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 
 .pa-plan-only .pa-back{border:1px solid var(--border,#ded8d0);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#342725);padding:0 12px}
 .pa-plan-only .pa-panel>header>div:first-child{flex:1}
+
+/* Keep product column headings visible below the family summary headings. */
+.pa-plan-only #paPlano>.pa-table>thead{position:sticky;top:0;z-index:5}
+.pa-plan-only #paPlano .pa-family-detail .pa-table thead{position:sticky;top:var(--pa-family-header-height,54px);z-index:4;background:var(--card,#fff)}
+.pa-plan-only #paPlano .pa-family-detail .pa-table thead th{background:var(--card,#fff)}

@@ -43,6 +43,7 @@ window.PcpEstoquePA=(()=>{
     if(opened)html+='<tr class="pa-family-detail"><td colspan="7"><table class="pa-table"><thead><tr>'+cols.map(([key,label])=>'<th><button type="button" data-detail-sort="'+key+'">'+esc(label)+(sort.key===key?(sort.desc?' ↓':' ↑'):' ↕')+'</button></th>').join('')+'</tr></thead><tbody>'+[...items].sort(compare).map(r=>'<tr>'+cols.map(([key,,fmt])=>'<td>'+esc(fmt(r[key]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></td></tr>';
     return html;
    }).join('')||'<tr><td colspan="7">Nenhum produto planejado nos filtros selecionados.</td></tr>';
+   box.style.setProperty('--pa-family-header-height',box.querySelector(':scope > table > thead').getBoundingClientRect().height+'px');
    box.querySelectorAll('[data-family-sort]').forEach(b=>b.onclick=()=>{const key=b.dataset.familySort;familySort.desc=familySort.key===key?!familySort.desc:key!=='familia';familySort.key=key;drawFamilies(rows);});
    box.querySelectorAll('[data-family]').forEach(b=>b.onclick=()=>{const f=b.dataset.family;expandedFamilies.has(f)?expandedFamilies.delete(f):expandedFamilies.add(f);drawFamilies(rows);});
    box.querySelectorAll('[data-detail-sort]').forEach(b=>b.onclick=()=>{const key=b.dataset.detailSort;sort.desc=sort.key===key?!sort.desc:true;sort.key=key;drawFamilies(rows);});

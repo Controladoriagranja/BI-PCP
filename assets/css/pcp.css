@@ -846,3 +846,22 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .cg-cond-dialog .cg-cond-status:empty{display:none}
 .cg-cond-dialog .cg-cond-groups-back{display:none}
 @media(max-width:800px){.cg-cond-toolbar{grid-template-columns:1fr}.cg-cond-toolbar .cg-cond-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Dedicated plan adherence: compact filters and expandable PCP families. */
+.pa-plan-only .pa-filter-grid{grid-template-columns:auto minmax(130px,1fr) minmax(130px,1fr) minmax(160px,1.2fr) minmax(180px,1.8fr) auto;align-items:end;gap:12px}
+.pa-plan-only .pa-filter-grid h2{align-self:center;margin:0;font-size:14px}
+.pa-plan-only .pa-filter-grid>div:last-child{display:flex;gap:8px;align-items:center}
+.pa-plan-only .pa-filter-grid .button{display:inline-flex;align-items:center;justify-content:center;height:36px;margin:0;text-decoration:none;white-space:nowrap;font:inherit;font-size:12px}
+.pa-plan-only .pa-panel>header h2{text-align:center;font-size:14px}
+.pa-plan-only #paPlano{max-height:none;height:calc(100dvh - 300px);min-height:360px}
+.pa-plan-only .pa-table th,.pa-plan-only .pa-table td{text-align:center;white-space:normal;padding:9px 8px}
+.pa-plan-only .pa-table th:first-child{min-width:0;position:static;font-weight:inherit}
+.pa-plan-only .pa-family button{background:transparent;border:0;color:var(--foreground,#342725);font:inherit;font-weight:600;cursor:pointer;padding:4px}
+.pa-plan-only .pa-family-detail>td{padding:0 12px 12px;background:var(--card,#fff)}
+.pa-plan-only .pa-family-detail .pa-table{width:100%}
+.pa-plan-only .pa-family-detail .pa-table thead{position:static}
+@media(max-width:1200px){.pa-plan-only .pa-filter-grid{grid-template-columns:repeat(4,minmax(120px,1fr))}.pa-plan-only .pa-filter-grid h2{display:none}.pa-plan-only .pa-filter-grid>div:last-child{grid-column:1/-1;justify-content:flex-end}}
+@media(max-width:650px){.pa-plan-only .pa-filter-grid{grid-template-columns:1fr 1fr}.pa-plan-only #paPlano{height:65dvh}.pa-plan-only .pa-family-detail{min-width:700px}.pa-plan-only .pa-table{font-size:11px}}
+
+.pa-plan-only .pa-back{border:1px solid var(--border,#ded8d0);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#342725);padding:0 12px}
+.pa-plan-only .pa-panel>header>div:first-child{flex:1}

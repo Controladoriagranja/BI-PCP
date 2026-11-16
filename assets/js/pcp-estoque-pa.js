@@ -32,7 +32,7 @@ window.PcpEstoquePA=(()=>{
 
   function directorFamily(row){
    const family=row.familia||'OUTROS';
-   const groups=[['Asa',['ASA','COXINHA ASA','MEIO ASA']],['Coxa e sobrecoxa',['COXA','SOBRECOXA','COXA SOBREC','COXA PORCAO DORSAL']],['Peito e filé',['PEITO','FILE PEITO']],['Frango inteiro',['FRANGO CONGELADO','FRANGO RESFRIADO','FRANGO TEMPERADO']],['Miúdos',['CORACAO','FIGADO','MOELA']],['Pés',['PES']],['Subprodutos',['CMS','DORSO','PELE','PENAS','SANGUE','VISCERAS','PESCOCO','SAMBIQUIRA']]];
+   const groups=[['Asa',['ASA','COXINHA ASA','MEIO ASA']],['Coxa',['COXA','SOBRECOXA','COXA SOBREC','COXA PORCAO DORSAL']],['Peito',['PEITO']],['Filé de peito',['FILE PEITO']],['Frango',['PESCOCO','SAMBIQUIRA','PASSARINHO','APERITIVO','PALETINHA']],['Inteiros',['FRANGO CONGELADO','FRANGO RESFRIADO','FRANGO TEMPERADO']],['Miúdos',['CORACAO','FIGADO','MOELA','PES']],['Industrializados',['LINGUICA']],['Secundários',['CMS','DORSO','PELE','PENAS','SANGUE','VISCERAS','RESIDUOS']]];
    return groups.find(([,families])=>families.includes(family))?.[0]||'Outros';
   }
   function drawFamilies(rows){

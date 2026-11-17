@@ -14,7 +14,14 @@ window.PcpParadas=(()=>{
   async function load(){const id=++generation;controller?.abort();controller=new AbortController();resetDetail();status.textContent='Carregando paradas…';summary.replaceChildren();detail.replaceChildren();dialog.setAttribute('aria-busy','true');
    try{const result=await api('/api/pcp/comparativo/paradas',{...context,visao:view.value||'geral'},{silent:true,signal:controller.signal});if(id!==generation)return;if(!result.ok)throw Error('Consulta não concluída');
     const total=result.cobertura_completa||result.total_ocorrencias?result.total_minutos:null;
-    summary.innerHTML=table(['Tipos de parada','Tempo total (minutos)','Tempo total (horas)','%'],[...result.resumo.map(r=>[r.tipo,num(r.minutos),hours(r.minutos),pct(r.participacao)]),['TOTAL',num(total),total==null?'—':hours(total),total? '100,00%':total===0?'0,00%':'—']]);summary.querySelector('tbody tr:last-child')?.classList.add('cg-stops-total');
+    const months=[...new Set(String(context.mes||'').split(',').map(Number).filter(m=>m>=1&&m<=12))].sort((a,b)=>a-b).map(m=>String(context.ano)+'-'+String(m).padStart(2,'0'));
+    const monthly=months.length>1&&!context.dias;
+    const byType=new Map(),byMonth=new Map();
+    for(const r of result.detalhes){const month=String(r.data).slice(0,7),key=r.tipo_chave||r.tipo;const values=byType.get(key)||new Map();values.set(month,(values.get(month)||0)+Number(r.minutos||0));byType.set(key,values);byMonth.set(month,(byMonth.get(month)||0)+Number(r.minutos||0));}
+    const head=['Tipos de parada',...(monthly?months.map(m=>m.slice(5)+'/'+m.slice(0,4)+' (min)'):[]),'Tempo total (minutos)','Tempo total (horas)','%'];
+    const rows=result.resumo.map(r=>[r.tipo,...(monthly?months.map(m=>num(byType.get(r.tipo_chave||r.tipo)?.get(m)||0)):[]),num(r.minutos),hours(r.minutos),pct(r.participacao)]);
+    rows.push(['TOTAL',...(monthly?months.map(m=>num(byMonth.get(m)||0)):[]),num(total),total==null?'—':hours(total),total?'100,00%':total===0?'0,00%':'—']);
+    summary.innerHTML=table(head,rows);summary.querySelector('tbody tr:last-child')?.classList.add('cg-stops-total');
     loadedDetails=result.detalhes;
     result.resumo.forEach((r,i)=>{const cell=summary.querySelectorAll('tbody tr')[i].firstElementChild;const button=document.createElement('button');button.type='button';button.className='cg-stops-type';button.textContent=r.tipo;button.onclick=()=>showType(r.tipo,r.tipo_chave);cell.replaceChildren(button);});
     status.textContent=num(result.total_ocorrencias)+' ocorrências · '+(result.meta_rotulo||'Meta diária')+': '+(result.meta_por_unidade?Object.entries(result.metas_por_unidade||{}).map(([u,m])=>(u==='10'?'Ave Nova':'Real')+' '+num(m)+' min').join('; '):num(result.meta_periodo??result.meta_diaria)+' min')+' · Igual ou abaixo: verde; acima: vermelho'+(result.cobertura_completa?'':' · Cobertura parcial: há dias ainda sem carga confirmada.');

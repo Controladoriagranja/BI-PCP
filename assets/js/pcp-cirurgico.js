@@ -283,7 +283,7 @@ window.PcpCirurgico=(()=>{
     else if(selected.length===1)month=selected[0];
     if(select.value!==month)select.value=month;
    }else{
-    if(active){active=false;select.value=savedMonths;multi?.controller.closeAll();}
+    if(active){active=false;multi?.controller.closeAll();}
    }
    if(host){host.hidden=false;host.classList.toggle('cg-month-single',active);}
    return previous!==select.value;
@@ -321,7 +321,7 @@ window.PcpCirurgico=(()=>{
    }
    if(mode==='produtividade'){
     if(!active){
-     savedUnits=select.value;savedOptions=select.innerHTML;active=true;
+     savedUnits=select.value;unit=productivitySelection(savedUnits).join(',')||'10,111';savedOptions=select.innerHTML;active=true;
      select.innerHTML=productivityUnitOptions.map(([value,label])=>'<option value="'+value+'">'+esc(label)+'</option>').join('');
      if(labelText)labelText.textContent='Unidade / Turno';
      select.value=unit;multi?.controller.closeAll();
@@ -330,7 +330,7 @@ window.PcpCirurgico=(()=>{
      unit=productivitySelection(select.value).join(',')||'10';
      if(select.value!==unit)select.value=unit;
     }
-   }else if(active){active=false;select.innerHTML=savedOptions;if(labelText)labelText.textContent=originalLabel;select.value=savedUnits;multi?.controller.closeAll();}
+   }else if(active){const current=select.value;active=false;select.innerHTML=savedOptions;if(labelText)labelText.textContent=originalLabel;select.value=current;multi?.controller.closeAll();}
    if(host)host.classList.toggle('cg-unit-multiple',active);
   }
   return {sync};

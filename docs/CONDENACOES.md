@@ -4,7 +4,7 @@ O indicador % Cond (Tot+Par Quilos), ordem 11, abre o comparativo de causas por 
 
 Fonte: pcp.condenacoes já alimentada pelo coletor PCP existente. O ZIP recebido foi analisado como referência; não foi executado seu fluxo interativo. Nenhuma nova coleta ou alteração dos dados é necessária para a navegação.
 
-Grupos e equivalências extraídos de ResumoComparativoCondenações.xlsx, abas Parâmetro e ComparativoMensal, em pcp_condenacoes_mapa.json. Tipos Parcial/Total separados, novos nomes preservados em Outras. Resíduos ficam fora desse indicador de condenação.
+Grupos e equivalências extraídos de ResumoComparativoCondenações.xlsx, abas Parâmetro e ComparativoMensal, em pcp_condenacoes_mapa.json. Tipos Parcial/Total somados por causa nos resumos e identificados somente nas ocorrências do último nível; novos nomes preservados em Outras. Resíduos ficam fora desse indicador de condenação.
 
 Percentuais = soma dos pesos condenados / soma do peso vivo. Acumulado ponderado; não é média simples dos percentuais. Peso vivo nas mesmas fontes do Comparativo Cirúrgico: AN turnos 1+2, Real diário; sem repetir Peso Pesagem por causa. Falta de denominador retorna —. Os pesos detalhados são os do relatório de condenações, sem forçar igualdade com valores do Diário da Indústria.
 

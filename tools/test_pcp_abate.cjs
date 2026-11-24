@@ -66,9 +66,8 @@ for(const [unit,expected] of [['10',60000],['1',60000],['2',0],['111',80000],['1
  fields.Unidade.value=unit;
  const companies=unit==='111'?real:unit==='10,111'?[...production,...real]:production.map(r=>unit==='1'||unit==='2'?{...r,quantidade_cabecas:r.turnos[unit]??0}:r);
  state={status:'ready',limit:'2026-11-23',metas,rows:companies,pesos:weights};calendar.render();
- expectMeta(matchDay('2026-11-20'),expected);
- assert.match(matchDay('2026-11-21'),/>0 <small>aves/);expectMeta(matchDay('2026-11-21'),0);
- assert.match(matchDay('2026-11-21'),/>0,00%/);
+ if(unit!=='2')expectMeta(matchDay('2026-11-20'),expected);
+ assert.doesNotMatch(matchDay('2026-11-21'),/cg-production-heads|cg-production-day-weight|cg-calendar-mean|cg-prod-reference|cg-production-empty/,'Dia sem produção somente com a data');
  assert.doesNotMatch(matchDay('2026-11-24'),/999\.999|>0,00%/,'Futuro permanece sem indicadores');
  if(unit==='10'){
   expectMeta(total('week-2'),475000);expectMeta(total('month'),530000);

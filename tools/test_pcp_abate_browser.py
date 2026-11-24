@@ -29,14 +29,11 @@ browser.TEST = r'''
   const results=[];
   for(const [value,target,percent] of cases){
    unit.value=value;unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
-   assert(meta(day('20'))===target,'Meta 20/11: '+value);
-   assert(adherence(day('20'))===percent,'Aderência 20/11: '+value+' '+adherence(day('20')));
-   assert(meta(day('21'))===0&&adherence(day('21'))==='0,00%','Dia sem produção zerado e neutro');
-   assert(day('21').querySelector('.cg-production-day-weight strong').textContent==='0','Peso ausente zerado');
-   assert(day('21').querySelector('.cg-calendar-mean strong').textContent==='0,000','Peso médio ausente zerado');
-   assert(day('21').closest('td').querySelector('.cg-calendar-stops strong').textContent==='0 min','Paradas ausentes zeradas');
-   assert(!day('21').querySelector('.cg-prod-adherence strong').className,'Zero sem destaque vermelho/verde');
-   assert(day('24').disabled&&!day('24').querySelector('.cg-prod-adherence'),'Datas depois D-1 sem valores');
+   if(value==='2'){assert(day('20').textContent.trim()==='20','Turno sem produção mostra somente a data');}
+   else{assert(meta(day('20'))===target,'Meta 20/11: '+value);assert(adherence(day('20'))===percent,'Aderência 20/11: '+value+' '+adherence(day('20')));}
+   assert(day('21').textContent.trim()==='21','Dia sem produção mostra somente a data');
+   assert(!day('21').closest('td').querySelector('.cg-production-day-weight,.cg-production-heads,.cg-calendar-mean,.cg-calendar-stops,.cg-production-empty'),'Dia vazio sem rótulos, zeros ou traços');
+   assert(day('24').disabled&&day('24').textContent.trim()==='24','Dia futuro somente com a data');
    if(value==='1')assert(meta(day('16'))===65000,'Filtro 1T reconhece 2T positivo');
    if(value==='2')assert(meta(day('23'))===55000&&adherence(day('23'))==='101,82%','Somente 2T com meta do dia e aderência maior que 100%');
    const week=document.querySelector('[data-cg-week="2026-W47"]').closest('tr').querySelector('[data-cg-total]');
@@ -61,8 +58,8 @@ browser.TEST = r'''
   // Falha de consulta continua indisponível, em vez de ser exibida como zero.
   const previousGet=window.apiGet;window.apiGet=async(endpoint,p)=>{if(['Peso Vivo para Rendimento','Peso Médio'].includes(p?.descricao))throw Error('Falha simulada');return previousGet(endpoint,p);};
   unit.value='10';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
-  assert(day('21').querySelector('.cg-production-day-weight strong').textContent==='—','Peso com falha não vira zero');
-  assert(day('21').querySelector('.cg-calendar-mean strong').textContent==='—','Média com falha não vira zero');
+  assert(day('16').querySelector('.cg-production-day-weight strong').textContent==='—','Peso com falha não vira zero');
+  assert(day('16').querySelector('.cg-calendar-mean strong').textContent==='—','Média com falha não vira zero');
   window.apiGet=previousGet;unit.value='10,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
   // Peso e médias mantêm seus indicadores e as fontes de antes.
   const quantity=parse(day('16').querySelector('.cg-production-heads>span>strong'));

@@ -6,6 +6,8 @@ import test_pcp_productivity_browser as browser
 
 fixture = json.loads((browser.ROOT / 'tools/fixtures/produtividade-abate-2026.json').read_text(encoding='utf-8'))
 browser.SCRIPT = browser.SCRIPT.replace('const fixture=__FIXTURE__;', 'const fixture='+json.dumps(fixture, ensure_ascii=False)+';')
+browser.SCRIPT = browser.SCRIPT.replace("r.descricao==='Cabeças'", "r.descricao==='Cabeças'&&r.quantidade>0", 1)
+
 browser.TEST = r'''
 (async()=>{
  const assert=(ok,message)=>{if(!ok)throw Error(message);};
@@ -30,6 +32,9 @@ browser.TEST = r'''
    assert(meta(day('20'))===target,'Meta 20/11: '+value);
    assert(adherence(day('20'))===percent,'Aderência 20/11: '+value+' '+adherence(day('20')));
    assert(meta(day('21'))===0&&adherence(day('21'))==='0,00%','Dia sem produção zerado e neutro');
+   assert(day('21').querySelector('.cg-production-day-weight strong').textContent==='0','Peso ausente zerado');
+   assert(day('21').querySelector('.cg-calendar-mean strong').textContent==='0,000','Peso médio ausente zerado');
+   assert(day('21').closest('td').querySelector('.cg-calendar-stops strong').textContent==='0 min','Paradas ausentes zeradas');
    assert(!day('21').querySelector('.cg-prod-adherence strong').className,'Zero sem destaque vermelho/verde');
    assert(day('24').disabled&&!day('24').querySelector('.cg-prod-adherence'),'Datas depois D-1 sem valores');
    if(value==='1')assert(meta(day('16'))===65000,'Filtro 1T reconhece 2T positivo');
@@ -53,6 +58,12 @@ browser.TEST = r'''
    assert(!document.querySelector('#cgProdutividade [data-indicator-formula]'),'Fórmulas continuam ocultas');
    results.push({unit:value,target,percent});
   }
+  // Falha de consulta continua indisponível, em vez de ser exibida como zero.
+  const previousGet=window.apiGet;window.apiGet=async(endpoint,p)=>{if(['Peso Vivo para Rendimento','Peso Médio'].includes(p?.descricao))throw Error('Falha simulada');return previousGet(endpoint,p);};
+  unit.value='10';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  assert(day('21').querySelector('.cg-production-day-weight strong').textContent==='—','Peso com falha não vira zero');
+  assert(day('21').querySelector('.cg-calendar-mean strong').textContent==='—','Média com falha não vira zero');
+  window.apiGet=previousGet;unit.value='10,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
   // Peso e médias mantêm seus indicadores e as fontes de antes.
   const quantity=parse(day('16').querySelector('.cg-production-heads>span>strong'));
   assert(quantity===200000&&parse(day('16').querySelector('.cg-production-day-weight strong'))===600000,'Aves e peso preservados');

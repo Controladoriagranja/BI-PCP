@@ -9,7 +9,7 @@ const base={'AN_T1':[65000,65000,65000,65000,65000,60000],'AN_T2':[55000,55000,5
 const metas=Object.entries(base).flatMap(([series,values])=>values.flatMap((value,index)=>value==null?[]:[{
  indicador_codigo:'PROD_'+series+'_'+weekdays[index],referencia_mes:'2026-10-01',valor_meta:value,ativo:true,unidade:'aves',comparacao:'>=',tela:'calendario_producao_produtividade'
 }]));
-const row=(date,value,company='10')=>({data:date,empresa_codigo:company,quantidade_cabecas:value});
+const row=(date,value,company='10')=>({data:date,empresa_codigo:company,quantidade_cabecas:value,...(company==='10'?{turnos:new Date(date+'T00:00:00Z').getUTCDay()===6?{'1':value}:{'1':value/2,'2':value/2}}:{})});
 const grade=(rows,units='',company='10',goals=metas)=>JSON.parse(JSON.stringify(targets.grade(company,rows,goals,units)));
 const reference=context.window.PcpCirurgico.productivityReferenceMarkup;
 const positive=reference(114402,grade([row('2026-10-01',114402)]));
@@ -28,7 +28,7 @@ assert.deepEqual(grade([row('2026-10-03',60000)]),{className:'cg-prod-good',meta
 assert.equal(grade([row('2026-10-03',0)],'2').className,'','Sábado 2T vazio não vira meta zero');
 assert.equal(grade([row('2026-10-04',100)]).className,'','Domingo não possui meta');
 assert.equal(grade([]).className,'','Ausência de realização não tem cor');
-assert.equal(grade([row('2026-10-05',0)]).className,'cg-prod-bad','Zero realizado compara com a meta');
+assert.deepEqual(grade([row('2026-10-05',0)]),{className:'',meta:0},'Zero realizado tem meta zero e apresentação neutra');
 assert.equal(grade([row('2025-10-06',999999)]).className,'','Não transporta metas entre meses ou anos');
 assert.deepEqual(grade([row('2026-10-05',119999),row('2026-10-06',120000)]),{className:'cg-prod-bad',meta:240000},'Somente os dois dias realizados entram na soma');
 assert.deepEqual(grade([row('2026-10-05',80000,'111')],'111','111'),{className:'cg-prod-good',meta:80000});
@@ -102,7 +102,7 @@ module.exports=(async()=>{
  const day1=all.find(r=>r.data==='2026-10-01'&&r.empresa_codigo==='10');
  assert.equal(targets.grade('10',[day1],metas,'').meta,110000);
  assert.equal(targets.grade('10',[day1],metas,'').className,'cg-prod-good');
- assert.equal(targets.grade('10',[(await load('1'))[0]],metas,'1').className,'cg-prod-bad');
+ assert.equal(targets.grade('10',[(await load('1'))[0]],metas,'1',{turnosRows:all}).className,'cg-prod-bad');
  console.log('OK: amostra real de 01, 03 e 09/10 reconciliada, sem dupla contagem de Recepção/Compra; filtros Todos, A.N., 1T, 2T e R.A. preservados.');
  const response=(dados,total=dados.length,pagina=1,tamanho=1000)=>({ok:true,tabela:'metas',dados,total,pagina,tamanho});
  let called=false;

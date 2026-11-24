@@ -91,3 +91,15 @@ a navegação de todas as unidades para 05/10/2026, dia sem dados com atualizaç
 automática e navegação para 29/12/2025 a partir da semana cheia de janeiro/2026.
 Testes locais com API simulada; nenhuma publicação ou alteração do banco.
 Backup anterior em outputs/backups/produtividade-navegacao-20261105-162047/.
+
+
+## Metas de abate e aderência — 24/11/2026
+
+Ave Nova considera a produção completa por turno para escolher a meta: apenas 1T
+usa sua meta cadastrada de sábado; ambos os turnos usam as metas normais; apenas
+2T usa sua meta do dia. A Real mantém as metas atuais, conforme confirmação do
+usuário. Dias sem produção dentro do D−1 têm indicadores de abate zerados.
+Aderência Abate aparece após Diferença em todos os níveis, como razão das somas.
+O mensal continua com 12 meses, ambas as empresas e o total, independente dos
+filtros do calendário. Rendimento, pesos e paradas preservados.
+Veja [diagnóstico, regras, testes e limitações](METAS-ABATE-ADERENCIA.md).

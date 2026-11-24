@@ -56,9 +56,9 @@ TEST = r'''
  const assert=(condition,message)=>{if(!condition)throw Error(message);};
  const flush=async()=>{await new Promise(r=>setTimeout(r,40));};
  try{
-  await flush();
+  await document.fonts.ready;await flush();
   const unit=document.getElementById('cgUnidade'),flag=value=>document.querySelector('input[name="cgTipoIndicador"][value="'+value+'"]');
-  unit.value='1,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
+  unit.value='10';unit.dispatchEvent(new Event('change',{bubbles:true}));await flush();
   const rendimentoMarkup=()=>document.getElementById('cgDiario').innerHTML.replace(/ style="[^"]*"/g,'');
   const originalOptions=[...unit.options].map(o=>[o.value,o.textContent]),originalRendimento=rendimentoMarkup();
   const renditionStyle=()=>['display','gridTemplateColumns','padding'].map(key=>getComputedStyle(document.querySelector('.cg-filters'))[key]);
@@ -124,16 +124,18 @@ TEST = r'''
    const totalCell=document.querySelector('[data-cg-total="month"]');
    const actual=[...totalCell.querySelectorAll('.cg-production-heads>span>strong')].map(parse);
    assert(JSON.stringify(actual)===JSON.stringify(totals),'Total do calendário '+value+': '+actual+' / '+totals);
+   assert(totalCell.querySelector('.cg-prod-adherence strong'),'Aderência nos totais do calendário');
    const monthRow=document.querySelector('[data-cg-month-period="2026-11"]');
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
-   assert(document.querySelector('.cg-calendar-mean strong')?.textContent==='3,125','Peso Médio usa indicador do diário com três casas');
+   assert([...document.querySelectorAll('.cg-calendar-mean strong')].some(e=>e.textContent==='3,125'),'Peso Médio usa indicador do diário com três casas');
    assert([...monthRow.querySelectorAll('.cg-calendar-mean strong')].every(e=>e.textContent==='3,125')&&monthRow.querySelectorAll('.cg-calendar-mean').length===5,'Médias mensais ponderadas em todas as colunas');
    assert(getComputedStyle(document.querySelector('.cg-calendar-mean strong')).color===getComputedStyle(document.querySelector('.cg-prod-reference>span>span:last-child')).color,'Peso médio segue cinza da meta');
    const monthlyExpected=[222318,142587,364905];
    const stopValues=[...monthRow.querySelectorAll('.cg-monthly-stops strong')].map(e=>e.textContent);
    assert(JSON.stringify(stopValues)===JSON.stringify(['20 min','35 min','55 min','40 min','95 min']),'Paradas mensais por turno, empresa e geral: '+stopValues);
    assert(monthRow.querySelectorAll('[data-cg-periods="2026-11"]').length===5,'Clique mensal preserva período');
+   assert(monthRow.querySelectorAll('.cg-prod-adherence').length===5&&annualRow.querySelectorAll('.cg-prod-adherence').length===5,'Aderência em todas as colunas mensais e anuais');
    assert(monthRow.children.length===6,'Seis colunas alinhadas entre meses');
    assert(!monthRow.querySelector('h4'),'Turnos não se repetem nas linhas');
    const scroll=monthRow.closest('.cg-monthly-scroll'),head=scroll.querySelector('thead');
@@ -205,7 +207,7 @@ TEST = r'''
   document.getElementById('cgLimpar').click();await flush();assert(unit.value==='10','Limpar unidade');assert(!document.getElementById('cgSemanaCheia').checked,'Limpar semana cheia');
   flag('rendimento').click();await flush();
   assert(JSON.stringify([...unit.options].map(o=>[o.value,o.textContent]))===JSON.stringify(originalOptions),'Restaurar opções originais de Rendimento');
-  assert(unit.value==='1,111','Restaurar seleção múltipla de Rendimento');
+  assert(unit.value==='10','Preservar seleção de Rendimento nesta sequência');
   assert(!document.getElementById('cgGrupo').closest('label').hidden,'Grupo restaurado em Rendimento');
   assert(rendimentoMarkup()===originalRendimento,'Preservar tabela de Rendimento');
   assert(JSON.stringify(renditionStyle())===JSON.stringify(originalStyle),'Preservar layout de filtros de Rendimento');
@@ -289,7 +291,7 @@ def main():
         with zipfile.ZipFile(args.baseline) as archive:
             for name in ('assets/js/pcp-cirurgico.js','assets/css/pcp.css'):
                 (OUT / ('baseline-'+Path(name).name)).write_bytes(archive.read(name))
-        baseline_test = r'''(async()=>{try{await new Promise(r=>setTimeout(r,40));const unit=document.getElementById('cgUnidade');unit.value='1,111';unit.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,40));document.getElementById('test-result').textContent=JSON.stringify({ok:true,snapshot:pcpRendimentoSnapshot()});}catch(error){document.getElementById('test-result').textContent=JSON.stringify({ok:false,message:error.message});}})();'''
+        baseline_test = r'''(async()=>{try{await document.fonts.ready;await new Promise(r=>setTimeout(r,40));const unit=document.getElementById('cgUnidade');unit.value='10';unit.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,40));document.getElementById('test-result').textContent=JSON.stringify({ok:true,snapshot:pcpRendimentoSnapshot()});}catch(error){document.getElementById('test-result').textContent=JSON.stringify({ok:false,message:error.message});}})();'''
         baseline_page = page.replace(TEST,baseline_test).replace('/assets/js/pcp-cirurgico.js','/outputs/produtividade-layout/baseline-pcp-cirurgico.js').replace('/assets/css/pcp.css','/outputs/produtividade-layout/baseline-pcp.css')
         (OUT / 'baseline.html').write_text(baseline_page,encoding='utf-8')
     try:

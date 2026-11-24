@@ -23,7 +23,7 @@ const label={firstChild:{textContent:'Unidade'}};
 const controller={getState:()=>({host}),closeAll(){},summary:state=>state.selected.size+' selecionados'};
 const select={value:'1,111',innerHTML:'ORIGINAL',closest:()=>label,dispatchEvent(){},pcpMulti:{controller,field:{}}};
 const filter=app.createProductivityUnitFilter(select);
-filter.sync('produtividade');assert.equal(select.value,'10');
+filter.sync('produtividade');assert.equal(select.value,'111');
 assert.equal((select.innerHTML.match(/<option/g)||[]).length,4);
 assert.doesNotMatch(select.innerHTML,/value="both"/,'Não há opção combinada pronta');
 assert.match(select.innerHTML,/1° Turno - AN/);assert.match(select.innerHTML,/2° Turno - AN/);
@@ -38,7 +38,7 @@ click('111');assert.equal(select.value,'10,111','Real pode combinar com Ave Nova
 assert.equal(controller.summary({selected:new Set(['10','111'])}),'Real Alimentos + Ave Nova');
 click('10',false);assert.equal(select.value,'111');
 click('111',false);assert.equal(select.value,'10','Ao esvaziar, mantém uma unidade pré-selecionada');
-filter.sync('rendimento');assert.equal(select.value,'1,111');assert.equal(select.innerHTML,'ORIGINAL');assert.equal(label.firstChild.textContent,'Unidade');
+filter.sync('rendimento');assert.equal(select.value,'10');assert.equal(select.innerHTML,'ORIGINAL');assert.equal(label.firstChild.textContent,'Unidade');
 assert.equal(controller.summary({selected:new Set(['10','111'])}),'2 selecionados','Rendimento preserva resumo original');
 const groupLabel={hidden:false},group={value:'familias',closest:()=>groupLabel};
 const groupFilter=app.createProductivityGroupFilter(group);

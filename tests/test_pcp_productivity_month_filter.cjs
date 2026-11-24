@@ -28,17 +28,17 @@ assert.equal(choose('9').stopped,true);assert.equal(monthField.value,'9');assert
 choose('2');assert.equal(monthField.value,'2','Nova escolha substitui a anterior');choose('9');assert.equal(monthField.value,'9');
 choose('',true);assert.equal(monthField.value,'9','Selecionar tudo não pode ampliar a seleção em Produtividade');
 monthField.value='1,2,3,4,5,6,7,8,9,10,11,12';filter.sync('produtividade');assert.equal(monthField.value,'9','Resposta anterior não volta a selecionar vários meses');
-filter.sync('rendimento');assert.equal(monthField.value,'1,2,3,4,5,6,7,8,9,10,11,12','Restaura seleção anterior de Rendimento');
+filter.sync('rendimento');assert.equal(monthField.value,'9','Rendimento recebe o mês atual do calendário');
 assert.equal(multiHost.hidden,false);assert.equal(classes.has('cg-month-single'),false);assert.equal(choose('4').stopped,false,'Não intercepta o menu em Rendimento');
-monthField.value='3,5';filter.sync('produtividade');assert.equal(monthField.value,'5');filter.sync('rendimento');assert.equal(monthField.value,'3,5');
-monthField.value='';filter.sync('produtividade');assert.equal(monthField.value,'10');filter.sync('rendimento');assert.equal(monthField.value,'');
+monthField.value='3,5';filter.sync('produtividade');assert.equal(monthField.value,'5');filter.sync('rendimento');assert.equal(monthField.value,'5');
+monthField.value='';filter.sync('produtividade');assert.equal(monthField.value,'10');filter.sync('rendimento');assert.equal(monthField.value,'10');
 monthField.value='4';filter.sync('produtividade');assert.equal(monthField.value,'4');monthField.value='10';filter.sync('produtividade');assert.equal(monthField.value,'10','Limpar filtros mantém um mês definido');
 
 const unitHost=element(),unitClasses=new Set();unitHost.classList={toggle(name,on){if(on)unitClasses.add(name);else unitClasses.delete(name);}};
 const unitField={value:'111,1',changes:[],dispatchEvent(event){this.changes.push(this.value);},pcpMulti:{field:{},controller:{getState:()=>({host:unitHost}),closeAll(){}}}};
 const unitFilter=app.createProductivityUnitFilter(unitField);
 unitFilter.sync('rendimento');assert.equal(unitField.value,'111,1');
-unitFilter.sync('produtividade');assert.equal(unitField.value,'10','Ave Nova pré-selecionada');assert.equal(unitClasses.has('cg-unit-multiple'),true);
+unitFilter.sync('produtividade');assert.equal(unitField.value,'111','Combinação incompatível preserva Real');unitField.value='10';unitFilter.sync('produtividade');assert.equal(unitClasses.has('cg-unit-multiple'),true);
 const chooseUnit=(value,checked=true,all=false)=>{const e={target:{value,checked,matches:()=>true,hasAttribute:()=>all},stopped:false,stopImmediatePropagation(){this.stopped=true;}};unitHost.listeners.change(e);return e;};
 assert.equal(chooseUnit('111').stopped,true);assert.equal(unitField.value,'10,111','Empresas selecionadas em conjunto');
 chooseUnit('1');assert.equal(unitField.value,'1','Turno substitui Ave Nova total e cancela Real');
@@ -49,13 +49,13 @@ chooseUnit('2',false);assert.equal(unitField.value,'10','Desmarcar última opç�
 chooseUnit('',true,true);assert.equal(unitField.value,'10','Não amplia por Selecionar tudo');
 unitField.value='';unitFilter.sync('produtividade');assert.equal(unitField.value,'10');
 unitField.value='10,111';unitFilter.sync('produtividade');assert.equal(unitField.value,'10,111');
-unitFilter.sync('rendimento');assert.equal(unitField.value,'111,1','Rendimento restaura sua seleção múltipla');assert.equal(unitClasses.has('cg-unit-multiple'),false);assert.equal(chooseUnit('111').stopped,false);
+unitFilter.sync('rendimento');assert.equal(unitField.value,'10,111','Rendimento recebe a seleção atual');assert.equal(unitClasses.has('cg-unit-multiple'),false);assert.equal(chooseUnit('111').stopped,false);
 calendarRoot=element();calendarRoot.lastElementChild={append(){}};
 const monthsHost=element();
 calendarRoot.children={'.cg-production-months':monthsHost,'.cg-production-detail':element(),'.cg-production-notice':element()};
 const fields={Ano:{value:'2025,2026',options:[{value:'2025'},{value:'2026'}]},Mes:{value:'1,2,3,4,5,6,7,8,9,10,11,12'},Dia:{value:''},Grupo:{value:''},Unidade:{value:''},SemanaCheia:{checked:false}};
 const calendarState={status:'ready',limit:'2026-10-28',pesos:[{data:'2026-10-01',empresa_codigo:'10',peso_vivo:339866},{data:'2026-10-09',empresa_codigo:'10',peso_vivo:282001},{data:'2026-10-01',empresa_codigo:'111',peso_vivo:238560},{data:'2026-10-29',empresa_codigo:'10',peso_vivo:99999999}],rows:[
-  {data:'2026-10-01',empresa_codigo:'10',empresa:'Ave Nova',quantidade_cabecas:114402},
+  {data:'2026-10-01',empresa_codigo:'10',empresa:'Ave Nova',quantidade_cabecas:114402,turnos:{'1':63393,'2':51009}},
   {data:'2026-10-01',empresa_codigo:'111',empresa:'Real Alimentos',quantidade_cabecas:78043},
   {data:'2026-10-04',empresa_codigo:'10',empresa:'Ave Nova',quantidade_cabecas:10}
 ]};
@@ -116,7 +116,7 @@ clickArrow(1);assert.equal(multiHost.hidden,false);assert.equal(monthField.value
 clickArrow(-1);assert.equal(monthField.value,'10');assert.match(monthsHost.innerHTML,/outubro de 2026/);
 monthField.value='1';filter.sync('produtividade');navCalendar.render();clickArrow(-1);
 assert.equal(fields.Ano.value,'2025');assert.equal(monthField.value,'12');assert.match(monthsHost.innerHTML,/dezembro de 2025/);
-filter.sync('rendimento');assert.equal(monthField.value,'1,3,6');assert.equal(classes.has('cg-month-single'),false);assert.equal(multiHost.hidden,false);
+filter.sync('rendimento');assert.equal(monthField.value,'12');assert.equal(classes.has('cg-month-single'),false);assert.equal(multiHost.hidden,false);
 console.log('OK: um único mês/calendário em Produtividade, mudança e limpeza do filtro e multisseleção de Rendimento preservada.');
 console.log('OK: campo Mês visível em Produtividade e sincronizado com as setas, inclusive na virada do ano.');
 console.log('OK: totais abreviados por dia, sem turnos provisórios nem domingos na grade, subtítulos ocultos e totais reais preservados.');

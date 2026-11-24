@@ -7,7 +7,7 @@ const context={window:{},ApiScreen:{escape:String},PcpMulti:{values:v=>String(v|
 vm.runInNewContext(source.replace('return {mount};','return {mount,createProductivityMonthly};'),context);
 const row=(data,empresa_codigo,quantidade_cabecas)=>({data,empresa_codigo,quantidade_cabecas});
 const goal=(code,month,value)=>({indicador_codigo:'PROD_'+code,referencia_mes:'2026-'+month+'-01',valor_meta:value,ativo:true});
-const state={status:'ready',limit:'2026-10-28',rows:[row('2026-01-02','10',100),row('2026-01-02','111',200),row('2026-02-02','10',50),row('2026-02-02','111',0),row('2026-10-29','10',999999),row('2025-01-02','10',999999)],pesos:[
+const state={turnosMedias:[],turnosRows:[{...row('2026-01-02','10',100),turnos:{'1':50,'2':50}},{...row('2026-02-02','10',50),turnos:{'1':25,'2':25}}],status:'ready',limit:'2026-10-28',rows:[row('2026-01-02','10',100),row('2026-01-02','111',200),row('2026-02-02','10',50),row('2026-02-02','111',0),row('2026-10-29','10',999999),row('2025-01-02','10',999999)],pesos:[
  {data:'2026-01-02',empresa_codigo:'10',peso_vivo:300},{data:'2026-01-02',empresa_codigo:'111',peso_vivo:600},{data:'2026-02-02',empresa_codigo:'10',peso_vivo:150},{data:'2026-02-02',empresa_codigo:'111',peso_vivo:0},{data:'2026-10-29',empresa_codigo:'10',peso_vivo:999999}
 ],metas:[goal('AN_T1_SEX','01',60),goal('AN_T2_SEX','01',40),goal('RA_SEX','01',220),goal('AN_T1_SEG','02',30),goal('AN_T2_SEG','02',30),goal('RA_SEG','02',20)]};
 const fields={Ano:{value:'2026',options:[{value:'2025'},{value:'2026'}]},Grupo:{value:''}};
@@ -21,18 +21,18 @@ function expectCell(html,aves,weight,meta,difference){
  assert.match(html,new RegExp('>Diferença</span><strong[^>]*>'+difference+'<'));
 }
 monthly.render();
-assert.match(box.innerHTML,/>Total do mês</);
+assert.match(box.innerHTML,/>Total Geral</);
 assert.equal((box.innerHTML.match(/data-cg-total-year=/g)||[]).length,1);
-expectCell(cells(getRow('data-cg-month-period="2026-01"'))[2],300,900,320,-20);
-expectCell(cells(getRow('data-cg-month-period="2026-02"'))[2],50,150,80,-30);
+expectCell(cells(getRow('data-cg-month-period="2026-01"'))[4],300,900,320,-20);
+expectCell(cells(getRow('data-cg-month-period="2026-02"'))[4],50,150,60,-10);
 const annual=cells(getRow('data-cg-total-year="2026"'));
-expectCell(annual[0],150,450,160,-10);expectCell(annual[1],200,600,240,-40);expectCell(annual[2],350,'1\\.050',400,-50);
+expectCell(annual[2],150,450,160,-10);expectCell(annual[3],200,600,220,-20);expectCell(annual[4],350,'1\\.050',380,-30);
 assert.doesNotMatch(box.innerHTML,/999\.999/,'D−1 e ano selecionado limitam os totais');
-const empty=cells(getRow('data-cg-month-period="2026-03"'))[2];
-assert.match(empty,/cg-monthly-quantity">—/);assert.doesNotMatch(empty,/cg-prod-(?:good|bad)/);
+const empty=cells(getRow('data-cg-month-period="2026-03"'))[4];
+assert.match(empty,/cg-monthly-quantity"><strong>0<\/strong>/);assert.doesNotMatch(empty,/cg-prod-(?:good|bad)/);
 // Meta incompleta não ganha cor nem referência parcial no consolidado.
 state.metas=state.metas.filter(m=>m.indicador_codigo!=='PROD_RA_SEX');monthly.render();
-const incomplete=cells(getRow('data-cg-month-period="2026-01"'))[2];
+const incomplete=cells(getRow('data-cg-month-period="2026-01"'))[4];
 assert.match(incomplete,/>Meta<\/span><span>—</);assert.doesNotMatch(incomplete,/cg-prod-(?:good|bad)/);
 // A rolagem horizontal e vertical é preservada durante atualizações.
 box.scrollTop=120;box.scrollLeft=180;state.pesos[0].peso_vivo=301;monthly.render();

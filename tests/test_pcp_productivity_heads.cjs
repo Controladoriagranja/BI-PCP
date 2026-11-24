@@ -124,7 +124,7 @@ module.exports = (async () => {
   const incomplete = async endpoint => endpoint === APP_CONFIG.endpoints.modelo ? catalog : ({ ok: true, tabela: 'diario_industria_turnos', pagina: 1, tamanho: 1000, total: 2, dados: [row(1)] });
   await assert.rejects(heads.load(incomplete, periods, '', signal), /Paginação/);
   const changed = async (endpoint, params) => endpoint === APP_CONFIG.endpoints.modelo ? catalog : ({ ok: true, tabela: 'diario_industria_turnos', pagina: params.pagina, tamanho: 1, total: params.pagina === 1 ? 2 : 3, dados: [row(1)] });
-  await assert.rejects(heads.load(changed, periods, '', signal), /mudou durante/);
+  await assert.rejects(heads.load(changed, periods, '10', signal), /mudou durante/);
   await assert.rejects(heads.load(async () => { throw Error('Sem sessão'); }, periods, '', signal), /Sem sessão/);
   await assert.rejects(heads.load(async endpoint => {
     assert.equal(endpoint, APP_CONFIG.endpoints.modelo, 'Cancelamento impede consulta de registros'); return catalog;
@@ -191,8 +191,8 @@ module.exports = (async () => {
     indicatorMode: 'rendimento', data: { data_limite: '2026-10-27' }, loading: false, fields: { Unidade: { value: '' } },
     productivity: { periods: () => periods, render() {} }, apiGet() {},
     AbortController: class { constructor() { this.signal = { aborted: false }; } abort() { this.signal.aborted = true; } },
-    productivityTargets:{load:async()=>[]},productivityWeight:{load:async()=>[]},
-    productivityHeads: { load(get, periods, units, signal, fullWeek, limit) { return new Promise((resolve, reject) => pending.push({ resolve, reject, signal, fullWeek, limit })); } }
+    selectedHeadCompanies:()=>['10'],selectedHeadTurns:()=>['1','2'],productivityTargets:{load:async()=>[]},productivityWeight:{load:async()=>[]},
+    productivityHeads: { load(get, periods, units, signal, fullWeek, limit, totalSource, metric) { if(metric)return Promise.resolve([]);return new Promise((resolve, reject) => pending.push({ resolve, reject, signal, fullWeek, limit })); } }
   };
   const controller = source.slice(source.indexOf('  async function refreshHeads('), source.indexOf('  const dialog='));
   vm.runInNewContext(controller, state);

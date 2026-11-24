@@ -230,31 +230,60 @@ window.PcpCirurgico=(()=>{
     seen.add(key);return {...row,valor_meta:value};
    }).filter(row=>row.referencia_mes>=inicio&&row.referencia_mes<=fim);
   }
-  function grade(company,rows,metas=[],units=''){
-   const actual=rows.filter(row=>row.empresa_codigo===company&&row.quantidade_cabecas!=null&&Number.isFinite(row.quantidade_cabecas));
-   if(!actual.length)return {className:'',meta:null};
-   if(company==='111'&&selectedHeadTurns(units,company))return {className:'',meta:null};
-   const turns=selectedHeadTurns(units,'10');
-   const index=new Map(metas.filter(m=>m.ativo===true).map(m=>[m.indicador_codigo+'|'+m.referencia_mes,Number(m.valor_meta)]));
-   let meta=null;
-   for(const row of actual){
-    const day=suffix[new Date(row.data+'T00:00:00Z').getUTCDay()];if(!day)continue;
-    const month=row.data.slice(0,7)+'-01',prefix=company==='10'?'PROD_AN_':'PROD_RA_';
-    if(!metas.some(m=>m.ativo===true&&m.referencia_mes===month&&m.indicador_codigo.startsWith(prefix)))return {className:'',meta:null};
-    const codes=company==='10'?turns.map(turn=>'PROD_AN_T'+turn+'_'+day):['PROD_RA_'+day];
-    const values=codes.map(code=>index.get(code+'|'+month)).filter(value=>value!=null&&Number.isFinite(value));
-    if(values.length)meta=(meta??0)+values.reduce((sum,value)=>sum+value,0);
-   }
-   const realized=actual.reduce((sum,row)=>sum+row.quantidade_cabecas,0);
-   return {className:meta==null?'':realized>=meta?'cg-prod-good':'cg-prod-bad',meta};
+  function rating(value,meta){
+   return {className:!Number.isFinite(meta)||meta===0?'':value>=meta?'cg-prod-good':'cg-prod-bad',meta};
   }
-  return {load,grade};
+  function grade(company,rows,metas=[],units='',context={}){
+   // A presença dos turnos vem da carga completa, nunca do filtro de exibição.
+   const actual=new Map();
+   for(const row of rows){
+    if(row.empresa_codigo!==company||!Number.isFinite(row.quantidade_cabecas)||(context.limit&&row.data>context.limit))continue;
+    const previous=actual.get(row.data);
+    if(!previous||row.quantidade_cabecas>previous.quantidade_cabecas)actual.set(row.data,row);
+   }
+   if(!actual.size)return rating(0,context.limit?0:null);
+   if(company==='111'&&selectedHeadTurns(units,company))return rating(0,null);
+   const turns=selectedHeadTurns(units,'10'),completeTurns=new Map((context.turnosRows||[]).filter(row=>row.empresa_codigo==='10').map(row=>[row.data,row.turnos]));
+   const index=new Map(metas.filter(m=>m.ativo===true).map(m=>[m.indicador_codigo+'|'+m.referencia_mes,Number(m.valor_meta)]));
+   let meta=0,hasReference=false;
+   for(const row of actual.values()){
+    if(row.quantidade_cabecas<=0){hasReference=true;continue;}
+    const day=suffix[new Date(row.data+'T00:00:00Z').getUTCDay()];if(!day)continue;
+    const month=row.data.slice(0,7)+'-01';
+    let codes;
+    if(company==='10'){
+     const production=completeTurns.get(row.data)||row.turnos;
+     // Uma resposta ausente/falha não confirma que só houve um turno.
+     if(!production||context.turnosStatus==='error')return rating(0,null);
+     const first=Number.isFinite(production['1'])&&production['1']>0,second=Number.isFinite(production['2'])&&production['2']>0;
+     if(!first&&!second)return rating(0,null); // positivo no diário comum sem confirmação por turno
+     codes=turns.filter(turn=>turn==='1'?first:second).map(turn=>'PROD_AN_T'+turn+'_'+(first&&!second&&turn==='1'?'SAB':day));
+    }else codes=['PROD_RA_'+day]; // Real não possui turnos; metas preservadas.
+    for(const code of codes){
+     const value=index.get(code+'|'+month);
+     if(!Number.isFinite(value))return rating(0,null);
+     meta+=value;
+    }
+    hasReference=true;
+   }
+   const realized=[...actual.values()].reduce((sum,row)=>sum+row.quantidade_cabecas,0);
+   return rating(realized,hasReference?meta:null);
+  }
+  return {load,grade,rating};
  })();
- function productivityReferenceMarkup(value,rating){
-  const meta=Number.isFinite(rating.meta)?rating.meta:null,difference=Number.isFinite(value)&&meta!=null?value-meta:null;
-  const format=number=>number==null?'—':number.toLocaleString('pt-BR',{maximumFractionDigits:6});
-  return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+(difference!=null&&rating.className?' class="'+rating.className+'"':'')+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span></span>';
+ function productivityAbate(value,rating){
+  const meta=Number.isFinite(rating.meta)?rating.meta:null,valid=Number.isFinite(value)&&meta!=null;
+  return {difference:valid?value-meta:null,adherence:valid?(meta===0?0:value/meta*100):null};
  }
+
+ function productivityReferenceMarkup(value,rating){
+  const meta=Number.isFinite(rating.meta)?rating.meta:null,{difference,adherence}=productivityAbate(value,rating);
+  const format=number=>number==null?'—':number.toLocaleString('pt-BR',{maximumFractionDigits:6});
+  const percent=adherence==null?'—':adherence.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+  const color=meta>0&&rating.className?' class="'+rating.className+'"':'';
+  return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+color+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span><span class="cg-prod-adherence"><span>Aderência Abate</span><strong'+color+'>'+esc(percent)+'</strong></span></span>';
+ }
+
  function productivityWeightMarkup(value){
   return '<span class="cg-prod-weight" title="Peso Vivo para Rendimento"><span>Peso (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{maximumFractionDigits:6}):'—')+'</strong></span>';
  }
@@ -376,8 +405,7 @@ window.PcpCirurgico=(()=>{
    if(getHeads().status!=='ready'||!getHeads().limit||date>getHeads().limit||!PcpMulti.includes(fields.Grupo?.value,'producao'))return [];
    const companies=selectedHeadCompanies(calendarUnit()),rows=getHeads().rows.filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
    const weights=(getHeads().pesos||[]).filter(row=>row.data===date&&companies.includes(row.empresa_codigo));
-   if(!rows.length&&!weights.length)return [];
-   return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:null},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null,peso_medio:(getHeads().medias||[]).find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??null}));
+   return companies.map(code=>({...rows.find(row=>row.empresa_codigo===code)||{data:date,empresa_codigo:code,empresa:headCompanies[code],quantidade_cabecas:0},peso_vivo:weights.find(row=>row.empresa_codigo===code)?.peso_vivo??null,peso_medio:(getHeads().medias||[]).find(row=>row.data===date&&row.empresa_codigo===code)?.quantidade_cabecas??null}));
   }
 
   function weightedMean(rows){const valid=rows.filter(r=>Number.isFinite(r.peso_medio)&&Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0),count=valid.reduce((n,r)=>n+r.quantidade_cabecas,0);return valid.length===rows.filter(r=>Number.isFinite(r.quantidade_cabecas)&&r.quantidade_cabecas>0).length&&count?valid.reduce((n,r)=>n+r.peso_medio*r.quantidade_cabecas,0)/count:null;}
@@ -418,7 +446,7 @@ window.PcpCirurgico=(()=>{
    const value=sum('quantidade_cabecas');
    const ratings=rows.filter(row=>Number.isFinite(row.quantidade_cabecas)).map(row=>productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit()));
    const meta=ratings.length&&ratings.every(rating=>Number.isFinite(rating.meta))?ratings.reduce((total,rating)=>total+rating.meta,0):null;
-   return [{empresa_codigo:'both',empresa:combinedCompanyLabel,quantidade_cabecas:value,peso_vivo:sum('peso_vivo'),peso_medio:weightedMean(rows),_rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}}];
+   return [{empresa_codigo:'both',empresa:combinedCompanyLabel,quantidade_cabecas:value,peso_vivo:sum('peso_vivo'),peso_medio:weightedMean(rows),_rating:productivityTargets.rating(value,meta)}];
   }
   function emptyMessage(date){
    if(date&&getHeads().limit&&date>getHeads().limit)return 'Dados disponíveis até '+getHeads().limit.split('-').reverse().join('/')+' (D−1).';
@@ -561,15 +589,16 @@ window.PcpCirurgico=(()=>{
     const complete=stopBlocks.length&&stopBlocks.every(b=>Number.isFinite(b?.valores?.[code]?.[14])&&Number.isFinite(b?.metas_paradas?.[code]));
     const stops={minutes:complete?stopBlocks.reduce((n,b)=>n+b.valores[code][14],0):null,target:complete?stopBlocks.reduce((n,b)=>n+b.metas_paradas[code],0):null,periods:stopPeriods,view:code};
     const meanRows=rows.filter(r=>r.quantidade_cabecas>0),meanValues=meanRows.map(r=>({count:r.quantidade_cabecas,mean:(['1','2'].includes(code)?data.turnosMedias:data.medias||[]).find(m=>m.data===r.data&&(['1','2'].includes(code)?m._turn===code:m.empresa_codigo===code))?.quantidade_cabecas})),meanCount=meanValues.reduce((n,r)=>n+r.count,0),mean=meanCount&&meanValues.every(r=>Number.isFinite(r.mean))?meanValues.reduce((n,r)=>n+r.mean*r.count,0)/meanCount:null;
-    return {value:sum(sums),weight:sum(weights),mean,stops,rating:productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units)};
+    const covered=data.status==='ready'&&groupAllowed&&data.limit&&(!['1','2'].includes(code)||data.turnosStatus!=='error')&&periods.some(period=>period+'-01'<=data.limit),value=sum(sums)??(covered?0:null);
+    return {value,weight:sum(weights),mean,stops,rating:covered?productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units,{turnosRows:data.turnosRows,turnosStatus:data.turnosStatus,limit:data.limit}):productivityTargets.rating(0,null)};
    }
    function combined(items){
     const sum=field=>{const values=items.map(item=>item[field]).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
     const actual=items.filter(item=>Number.isFinite(item.value)),value=sum('value');
     const meta=actual.length&&actual.every(item=>Number.isFinite(item.rating.meta))?actual.reduce((total,item)=>total+item.rating.meta,0):null;
     const complete=items.every(item=>Number.isFinite(item.stops?.minutes)),stops={minutes:complete?items.reduce((n,item)=>n+item.stops.minutes,0):null,target:complete?items.reduce((n,item)=>n+item.stops.target,0):null,periods:items[0]?.stops?.periods||[],view:'geral'};
-    const mean=actual.length&&actual.every(i=>Number.isFinite(i.mean))&&value>0?actual.reduce((n,i)=>n+i.mean*i.value,0)/value:null;
-    return {value,weight:sum('weight'),mean,stops,rating:{meta,className:meta==null?'':value>=meta?'cg-prod-good':'cg-prod-bad'}};
+    const produced=actual.filter(i=>i.value>0),mean=produced.length&&produced.every(i=>Number.isFinite(i.mean))&&value>0?produced.reduce((n,i)=>n+i.mean*i.value,0)/value:null;
+    return {value,weight:sum('weight'),mean,stops,rating:productivityTargets.rating(value,meta)};
    }
    function cellMarkup({value,weight,mean,rating,stops}){
     const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
@@ -687,10 +716,12 @@ window.PcpCirurgico=(()=>{
    headsKey=key;const id=++headsGeneration;headsController?.abort();headsController=new AbortController();
    headsState={status:'loading',rows:[],limit};productivity.render();
    try{
-    const [production,targets,weight,means]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityTargets.load(apiGet,periods,headsController.signal,fullWeek,limit),productivityWeight.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit,'diario','Peso Médio')]);
+    const evidenceUnits=selectedHeadCompanies(units).includes('10')?(selectedHeadCompanies(units).includes('111')?'10,111':'10'):units;
+    const [production,targets,weight,means]=await Promise.allSettled([productivityHeads.load(apiGet,periods,evidenceUnits,headsController.signal,fullWeek,limit),productivityTargets.load(apiGet,periods,headsController.signal,fullWeek,limit),productivityWeight.load(apiGet,periods,units,headsController.signal,fullWeek,limit),productivityHeads.load(apiGet,periods,units,headsController.signal,fullWeek,limit,'diario','Peso Médio')]);
     if(production.status==='rejected')throw production.reason;
     if(id!==headsGeneration)return;
-    headsState={status:'ready',medias:means.status==='fulfilled'?means.value:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',limit};
+    const selectedTurn=selectedHeadTurns(units,'10'),rows=production.value.map(row=>row.empresa_codigo==='10'&&selectedTurn.length===1?{...row,quantidade_cabecas:row.turnos?.[selectedTurn[0]]??0}:row);
+    headsState={status:'ready',medias:means.status==='fulfilled'?means.value:[],rows,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',limit};
    }catch(e){
     if(id!==headsGeneration)return;
     headsState={status:'error',rows:[],limit};

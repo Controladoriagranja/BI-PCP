@@ -9,7 +9,7 @@ const PcpMulti={values:value=>String(value??'').split(',').filter(Boolean),inclu
 const context={window:{},ApiScreen:{escape:String},PcpMulti,requestAnimationFrame:callback=>callback(),ResizeObserver:class{constructor(callback){observers.push(callback);}observe(){}}};
 vm.runInNewContext(source.replace('return {mount};','return {mount,createProductivityMonthly};'),context);
 const fields={Ano:{value:'2026',options:[{value:'2025'},{value:'2026'}]},Mes:{value:'2'},Dia:{value:'2026-02-01'},SemanaCheia:{checked:true},Grupo:{value:''},Unidade:{value:''}};
-let state={status:'ready',limit:'2026-10-27',pesos:[{data:'2026-01-01',empresa_codigo:'10',peso_vivo:100},{data:'2026-01-02',empresa_codigo:'10',peso_vivo:250},{data:'2026-10-27',empresa_codigo:'10',peso_vivo:300},{data:'2026-10-28',empresa_codigo:'10',peso_vivo:99999999}],rows:[
+let state={turnosMedias:[],turnosRows:[{data:'2026-10-27',empresa_codigo:'10',quantidade_cabecas:100,turnos:{'1':50,'2':50}}],status:'ready',limit:'2026-10-27',pesos:[{data:'2026-01-01',empresa_codigo:'10',peso_vivo:100},{data:'2026-01-02',empresa_codigo:'10',peso_vivo:250},{data:'2026-10-27',empresa_codigo:'10',peso_vivo:300},{data:'2026-10-28',empresa_codigo:'10',peso_vivo:99999999}],rows:[
  {data:'2026-01-01',empresa_codigo:'10',quantidade_cabecas:1},{data:'2026-01-02',empresa_codigo:'10',quantidade_cabecas:2},
  {data:'2026-01-02',empresa_codigo:'111',quantidade_cabecas:5},{data:'2026-10-27',empresa_codigo:'10',quantidade_cabecas:100},
  {data:'2026-10-27',empresa_codigo:'111',quantidade_cabecas:0},{data:'2026-10-28',empresa_codigo:'10',quantidade_cabecas:999999}
@@ -18,9 +18,9 @@ const monthly=context.window.PcpCirurgico.createProductivityMonthly(host,fields,
 monthly.render();
 assert.equal(status.hidden,true);assert.equal(monthly.periods().length,12);
 assert.deepEqual(Array.from(monthly.periods(),p=>p.month),[1,2,3,4,5,6,7,8,9,10,11,12]);
-assert.match(box.innerHTML,/<th scope="col">Mês<\/th><th scope="col">Ave Nova<\/th><th scope="col">Real Alimentos<\/th>/);
+assert.match(box.innerHTML,/<th scope="col" rowspan="2">Mês<\/th><th scope="colgroup" colspan="3">Ave Nova<\/th>/);assert.match(box.innerHTML,/>Real Alimentos<\/th>/);
 assert.equal((box.innerHTML.match(/data-cg-month-period=/g)||[]).length,12);
-assert.equal((box.innerHTML.match(/<td(?: |>|\n)/g)||[]).length,39);
+assert.equal((box.innerHTML.match(/<td(?: |>|\n)/g)||[]).length,65);
 assert.match(box.innerHTML,/3<\/strong> <small>aves/);assert.match(box.innerHTML,/100<\/strong> <small>aves/);
 assert.match(box.innerHTML,/0<\/strong> <small>aves/);assert.doesNotMatch(box.innerHTML,/999\.999/);
 assert.match(box.innerHTML,/Peso \(kg\).*<strong>350<\/strong>/);assert.match(box.innerHTML,/Peso \(kg\).*<strong>300<\/strong>/);assert.doesNotMatch(box.innerHTML,/99\.999\.999/);
@@ -31,8 +31,8 @@ assert.equal(box.table.style.width,'100%');assert.equal(box.scrollTop,0);
 box.scrollTop=170;
 state.metas=[{indicador_codigo:'PROD_AN_T1_TER',referencia_mes:'2026-10-01',valor_meta:50,ativo:true},{indicador_codigo:'PROD_AN_T2_TER',referencia_mes:'2026-10-01',valor_meta:50,ativo:true},{indicador_codigo:'PROD_RA_TER',referencia_mes:'2026-10-01',valor_meta:80,ativo:true}];
 monthly.render();assert.equal(box.scrollTop,170,'Atualização conserva a rolagem vertical');
-assert.match(box.innerHTML,/<strong class="cg-prod-good"[^>]*>100/);assert.match(box.innerHTML,/<strong class="cg-prod-bad"[^>]*>0/);
-assert.match(box.innerHTML,/>Meta<\/span><span>100<\/span>/);assert.match(box.innerHTML,/class="cg-prod-good">0<\/strong>/);assert.match(box.innerHTML,/class="cg-prod-bad">-80<\/strong>/);
+assert.match(box.innerHTML,/<strong class="cg-prod-good"[^>]*>100/);assert.doesNotMatch(box.innerHTML,/<strong class="cg-prod-bad"[^>]*>0/);
+assert.match(box.innerHTML,/>Meta<\/span><span>100<\/span>/);assert.match(box.innerHTML,/class="cg-prod-good">0<\/strong>/);assert.match(box.innerHTML,/cg-prod-adherence/);
 const html=box.innerHTML;
 fields.Mes.value='9';fields.Dia.value='2026-09-01';fields.SemanaCheia.checked=false;monthly.render();
 assert.equal(box.innerHTML,html,'Mês, dia e semana cheia preservam o mensal');assert.equal(box.scrollTop,170);
@@ -56,10 +56,10 @@ module.exports=(async()=>{
   const controllerState={
     indicatorMode:'produtividade',data:{data_limite:'2026-10-27'},loading:false,
     fields,monthlyKey:'',monthlyGeneration:0,monthlyController:null,monthlyState:{status:'idle',rows:[]},
-    monthly:{periods:()=>[{year:2026,month:1},{year:2026,month:10}],render(){renders++;}},PcpMulti,apiGet(){},
+    monthly:{periods:()=>[{year:2026,month:1},{year:2026,month:10}],render(){renders++;}},PcpMulti,apiGet(){return Promise.resolve({mensal:[]});},
     AbortController:class{constructor(){this.signal={aborted:false};}abort(){this.signal.aborted=true;}},
     productivityTargets:{load:async()=>[]},productivityWeight:{load:async()=>[]},
-    productivityHeads:{load(get,periods,units,signal,fullWeek,limit,totalSource){if(totalSource!=='diario'){turnQueries.push({periods,units,signal,fullWeek,limit,totalSource});return Promise.resolve([]);}return new Promise((resolve,reject)=>pending.push({periods,units,signal,fullWeek,limit,totalSource,resolve,reject}));}}
+    productivityHeads:{load(get,periods,units,signal,fullWeek,limit,totalSource,metric){if(metric)return Promise.resolve([]);if(totalSource!=='diario'){turnQueries.push({periods,units,signal,fullWeek,limit,totalSource});return Promise.resolve([]);}return new Promise((resolve,reject)=>pending.push({periods,units,signal,fullWeek,limit,totalSource,resolve,reject}));}}
   };
   const controller=source.slice(source.indexOf('  async function refreshMonthly('),source.indexOf('  const dialog='));
   vm.runInNewContext(controller,controllerState);

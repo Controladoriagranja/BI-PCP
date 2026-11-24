@@ -44,7 +44,7 @@ module.exports=(async()=>{
  const metas=await app.productivityTargets.load(get,periods,signal,false,fixture.limit);assert.equal(metas.length,17);
  for(const [unit,values] of Object.entries(expected)){
   fields.Unidade.value=unit;
-  state={status:'ready',limit:fixture.limit,metas,rows:await app.productivityHeads.load(get,periods,unit,signal,false,fixture.limit),pesos:await app.productivityWeight.load(get,periods,unit,signal,false,fixture.limit)};
+  state={status:'ready',limit:fixture.limit,metas,rows:(await app.productivityHeads.load(get,periods,unit==='1'||unit==='2'?'10':unit,signal,false,fixture.limit)).map(r=>r.empresa_codigo==='10'&&(unit==='1'||unit==='2')?{...r,quantidade_cabecas:r.turnos[unit]??0}:r),pesos:await app.productivityWeight.load(get,periods,unit,signal,false,fixture.limit)};
   calendar.render();
   for(const [index,date] of ['2026-11-02','2026-11-03'].entries()){
    const html=monthsHost.innerHTML.match(new RegExp('<button[^>]*data-cg-day="'+date+'"[\\s\\S]*?</button>'))[0];
@@ -56,14 +56,14 @@ module.exports=(async()=>{
   }
  }
  // O mensal mantém o diário comum e as duas empresas, sem o filtro de turno.
- const monthlyState={status:'ready',limit:fixture.limit,metas,rows:await app.productivityHeads.load(get,periods,'',signal,false,fixture.limit,'diario'),pesos:await app.productivityWeight.load(get,periods,'',signal,false,fixture.limit,'diario')};
+ const monthlyState={turnosMedias:[],turnosRows:await app.productivityHeads.load(get,periods,'10',signal,false,fixture.limit),status:'ready',limit:fixture.limit,metas,rows:await app.productivityHeads.load(get,periods,'',signal,false,fixture.limit,'diario'),pesos:await app.productivityWeight.load(get,periods,'',signal,false,fixture.limit,'diario')};
  fields.Unidade.value='both';
  const box={innerHTML:'',scrollTop:0,scrollLeft:0,querySelector:()=>({style:{}})},status={};
  const monthly=app.createProductivityMonthly({querySelector:s=>s==='p'?status:box,closest:()=>null},fields,()=>monthlyState,()=> '2026-11');monthly.render();
  const monthlyRow=box.innerHTML.match(/<tr data-cg-month-period="2026-11"[^>]*>(.*?)<\/tr>/)[1],cells=[...monthlyRow.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map(m=>m[1]);
- check(cells[0],[222318,699213,240000,-17682],'Ave Nova','Mensal novembro até 03/11');
- check(cells[1],[142587,477105,160000,-17413],'Real Alimentos','Mensal novembro até 03/11');
- check(cells[2],[364905,1176318,400000,-35095],'Ave Nova + Real Alimentos','Mensal novembro até 03/11');
+ check(cells[2],[222318,699213,240000,-17682],'Ave Nova','Mensal novembro até 03/11');
+ check(cells[3],[142587,477105,160000,-17413],'Real Alimentos','Mensal novembro até 03/11');
+ check(cells[4],[364905,1176318,400000,-35095],'Ave Nova + Real Alimentos','Mensal novembro até 03/11');
  // Diferença real entre fontes: não corrigir artificialmente os pesos.
  assert.equal(expected['10'].total[1]-monthlyState.pesos.filter(r=>r.empresa_codigo==='10').reduce((sum,r)=>sum+r.peso_vivo,0),2);
  assert.equal(checks.length,92);

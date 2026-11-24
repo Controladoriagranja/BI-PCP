@@ -103,3 +103,34 @@ Aderência Abate aparece após Diferença em todos os níveis, como razão das s
 O mensal continua com 12 meses, ambas as empresas e o total, independente dos
 filtros do calendário. Rendimento, pesos e paradas preservados.
 Veja [diagnóstico, regras, testes e limitações](METAS-ABATE-ADERENCIA.md).
+
+
+## Soma das paradas disponíveis — 24/11/2026
+
+Os totais de paradas da Produtividade somam os minutos informados, mesmo quando
+houver dias, empresas ou meses sem valor. Ausência total continua como —; zero
+numérico confirmado participa da soma. A API mantém sua validação de cobertura.
+
+O mensal numérico da API tem prioridade. Quando ele vem nulo por cobertura
+parcial, usam-se os valores diários disponíveis do mesmo mês, empresa e turno,
+já retornados pela consulta anual existente. Não se somam mensal e diário juntos.
+O anual soma os meses disponíveis; os dias da API ficam limitados ao D−1.
+O título dos totais informa quando a soma contém lacunas de cobertura.
+
+Ave Nova total continua independente de 1T/2T. O geral soma AN total + Real,
+sem acrescentar os turnos novamente. Os filtros do calendário e a independência
+do mensal são preservados, assim como as metas disponíveis. Sem meta completa,
+os minutos continuam visíveis, com apresentação neutra.
+
+Conferido com pcp_paradas.py e pcp_comparativo.py no api_zootecnico(4).zip fornecido.
+Nenhuma alteração de API, backend, banco ou consulta adicional foi necessária.
+O bloco de Rendimento e o CSS permanecem idênticos.
+
+Validação: 12 suítes JavaScript; Edge headless com API simulada, cinco seleções
+em 1366, 1440 e 1920 px, incluindo dia/mês ausente, recuperação diária, fonte
+consolidada independente, zero confirmado, D−1 e total anual. Não representa
+conferência autenticada dos valores publicados.
+
+Executar: node tools/test_pcp_productivity_stops.cjs e
+python -B tools/test_pcp_productivity_stops_browser.py --widths 1366,1440,1920.
+Backup anterior em outputs/backups/produtividade-soma-paradas-20261124/.

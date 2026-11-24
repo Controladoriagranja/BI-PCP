@@ -284,6 +284,26 @@ window.PcpCirurgico=(()=>{
   return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+color+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span><span class="cg-prod-adherence"><span>Aderência Abate</span><strong'+color+'>'+esc(percent)+'</strong></span></span>';
  }
 
+ // Somar apenas minutos informados. Ausência não cancela os demais nem vira zero.
+ function productivityStopsTotal(items){
+  const available=items.filter(item=>Number.isFinite(item.minutes)),targets=items.filter(item=>Number.isFinite(item.target));
+  return {minutes:available.length?available.reduce((sum,item)=>sum+item.minutes,0):null,
+   target:items.length&&targets.length===items.length?targets.reduce((sum,item)=>sum+item.target,0):null,
+   partial:available.length!==items.length||items.some(item=>item.partial)};
+ }
+ function productivityStopsPeriod(data,periods,code){
+  const eligible=[...new Set(periods)].filter(period=>data.limit&&period<=data.limit.slice(0,7));
+  const result=productivityStopsTotal(eligible.map(period=>{
+   const block=(data.paradas||[]).find(block=>block.mes===period),minutes=block?.valores?.[code]?.[14],target=block?.metas_paradas?.[code];
+   if(Number.isFinite(minutes))return {minutes,target};
+   // O backend pode retornar mensal nulo por cobertura parcial, mesmo com dias disponíveis.
+   // O mensal informado tem prioridade: nunca somá-lo novamente aos dias.
+   const daily=[...new Map((data.paradasDias||[]).filter(day=>day.data?.slice(0,7)===period&&day.data<=data.limit).map(day=>[day.data,day])).values()];
+   const available=productivityStopsTotal(daily.map(day=>({minutes:day.valores?.[code]?.[14]})));
+   return {minutes:available.minutes,target,partial:true};
+  }));
+  return {...result,periods:eligible,view:code};
+ }
  function productivityWeightMarkup(value,emptyZero=false){
   if(emptyZero&&!Number.isFinite(value))value=0;
   return '<span class="cg-prod-weight" title="Peso Vivo para Rendimento"><span>Peso (kg)</span><strong>'+esc(Number.isFinite(value)?value.toLocaleString('pt-BR',{maximumFractionDigits:6}):'—')+'</strong></span>';
@@ -423,13 +443,10 @@ window.PcpCirurgico=(()=>{
    const days=[...new Set(dates.filter(d=>d&&d<=report.data_limite&&PcpMulti.includes(fields.Dia.value,d)&&new Date(d+'T00:00:00Z').getUTCDay()!==0))];
    if(!days.length)return '';
    const blocks=days.map(d=>(report.dias||[]).find(b=>b.data===d));
-   const complete=blocks.every(b=>b&&keys.every(k=>Number.isFinite(b.valores?.[k]?.[14])));
-   if(!complete){
-    const empty=blocks.every(b=>keys.every(k=>!Number.isFinite(b?.valores?.[k]?.[14])));
-    return '<span class="cg-calendar-stops"><span>Paradas (min)</span>'+(empty?'<strong>0 min</strong>':'<span>—</span>')+'</span>';
-   }
-   const minutes=blocks.reduce((sum,b)=>sum+keys.reduce((n,k)=>n+b.valores[k][14],0),0),target=blocks.reduce((sum,b)=>sum+keys.reduce((n,k)=>n+(b.metas_paradas?.[k]??(k==='10'?60:30)),0),0);
-   return '<button type="button" class="cg-calendar-stops" data-cg-stop="'+(keys.length===1?keys[0]:'geral')+'" data-cg-date="'+days[0]+'" data-cg-dates="'+days.join(',')+'" title="Ver resumo e ocorrências de paradas · Meta: '+target+' min"><span>Paradas (min)</span><strong class="'+(minutes<=target?'cg-prod-good':'cg-prod-bad')+'">'+minutes.toLocaleString('pt-BR')+' min</strong></button>';
+   const result=productivityStopsTotal(blocks.flatMap(b=>keys.map(k=>({minutes:b?.valores?.[k]?.[14],target:b?.metas_paradas?.[k]??(k==='10'?60:30)}))));
+   if(result.minutes==null)return '<span class="cg-calendar-stops"><span>Paradas (min)</span><span>—</span></span>';
+   const {minutes,target,partial}=result;
+   return '<button type="button" class="cg-calendar-stops" data-cg-stop="'+(keys.length===1?keys[0]:'geral')+'" data-cg-date="'+days[0]+'" data-cg-dates="'+days.join(',')+'" title="Ver resumo e ocorrências de paradas · Meta: '+target+' min'+(partial?' · Soma dos dados disponíveis; há dias ou unidades sem valor informado.':'')+'"><span>Paradas (min)</span><strong class="'+(minutes<=target?'cg-prod-good':'cg-prod-bad')+'">'+minutes.toLocaleString('pt-BR')+' min</strong></button>';
   }
   function totals(dates){
    if(getHeads().status!=='ready'||!PcpMulti.includes(fields.Grupo?.value,'producao'))return [];
@@ -591,25 +608,23 @@ window.PcpCirurgico=(()=>{
    function summary(code,periods){
     const entries=periods.map(period=>code+'|'+period),rows=entries.flatMap(key=>dailyRows.get(key)||[]);
     const sum=map=>{const values=entries.map(key=>map.get(key)).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
-    const stopPeriods=periods.filter(period=>!data.limit||period<=data.limit.slice(0,7)),stopBlocks=stopPeriods.map(period=>(data.paradas||[]).find(b=>b.mes===period));
-    const complete=stopBlocks.length&&stopBlocks.every(b=>Number.isFinite(b?.valores?.[code]?.[14])&&Number.isFinite(b?.metas_paradas?.[code]));
-    const stops={minutes:complete?stopBlocks.reduce((n,b)=>n+b.valores[code][14],0):null,target:complete?stopBlocks.reduce((n,b)=>n+b.metas_paradas[code],0):null,periods:stopPeriods,view:code};
+    const stops=productivityStopsPeriod(data,periods,code);
     const meanRows=rows.filter(r=>r.quantidade_cabecas>0),meanValues=meanRows.map(r=>({count:r.quantidade_cabecas,mean:(['1','2'].includes(code)?data.turnosMedias:data.medias||[]).find(m=>m.data===r.data&&(['1','2'].includes(code)?m._turn===code:m.empresa_codigo===code))?.quantidade_cabecas})),meanCount=meanValues.reduce((n,r)=>n+r.count,0),mean=meanCount&&meanValues.every(r=>Number.isFinite(r.mean))?meanValues.reduce((n,r)=>n+r.mean*r.count,0)/meanCount:null;
     const covered=data.status==='ready'&&groupAllowed&&data.limit&&(!['1','2'].includes(code)||data.turnosStatus!=='error')&&periods.some(period=>period+'-01'<=data.limit),value=sum(sums)??(covered?0:null);
-    stops.emptyZero=covered&&data.paradasStatus!=='error'&&stopBlocks.every(b=>!Number.isFinite(b?.valores?.[code]?.[14]));
+
     return {value,weight:sum(weights),mean,stops,meanStatus:['1','2'].includes(code)?data.turnosMediaStatus:data.mediaStatus,weightStatus:['1','2'].includes(code)?data.turnosPesoStatus:data.pesoStatus,rating:covered?productivityTargets.grade(code==='1'||code==='2'?'10':code,rows,data.metas||[],code==='1'||code==='2'?code:units,{turnosRows:data.turnosRows,turnosStatus:data.turnosStatus,limit:data.limit}):productivityTargets.rating(0,null)};
    }
    function combined(items){
     const sum=field=>{const values=items.map(item=>item[field]).filter(Number.isFinite);return values.length?values.reduce((a,b)=>a+b,0):null;};
     const actual=items.filter(item=>Number.isFinite(item.value)),value=sum('value');
     const meta=actual.length&&actual.every(item=>Number.isFinite(item.rating.meta))?actual.reduce((total,item)=>total+item.rating.meta,0):null;
-    const complete=items.every(item=>Number.isFinite(item.stops?.minutes)),stops={minutes:complete?items.reduce((n,item)=>n+item.stops.minutes,0):null,target:complete?items.reduce((n,item)=>n+item.stops.target,0):null,periods:items[0]?.stops?.periods||[],view:'geral',emptyZero:items.every(item=>item.stops?.emptyZero||item.stops?.minutes===0)};
+    const stops={...productivityStopsTotal(items.map(item=>item.stops||{})),periods:items[0]?.stops?.periods||[],view:'geral'};
     const produced=actual.filter(i=>i.value>0),mean=produced.length&&produced.every(i=>Number.isFinite(i.mean))&&value>0?produced.reduce((n,i)=>n+i.mean*i.value,0)/value:null;
     return {value,weight:sum('weight'),mean,stops,meanStatus:items.some(item=>item.meanStatus==='error')?'error':'ready',weightStatus:items.some(item=>item.weightStatus==='error')?'error':'ready',rating:productivityTargets.rating(value,meta)};
    }
    function cellMarkup({value,weight,mean,rating,stops,meanStatus,weightStatus}){
     const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
-    const stopsHTML=stops?.periods?.length?'<button type="button" class="cg-monthly-stops" data-cg-stop="'+stops.view+'" data-cg-date="'+stops.periods[0]+'" data-cg-monthly="true" data-cg-periods="'+stops.periods.join(',')+'" title="Ver resumo e ocorrências de paradas"><span>Paradas (min)</span><strong'+(stops.minutes==null?'':' class="'+(stops.minutes<=stops.target?'cg-prod-good':'cg-prod-bad')+'"')+'>'+esc(stops.minutes==null?(stops.emptyZero?'0 min':'—'):stops.minutes.toLocaleString('pt-BR')+' min')+'</strong></button>':'';
+    const stopsHTML=stops?.periods?.length?'<button type="button" class="cg-monthly-stops" data-cg-stop="'+stops.view+'" data-cg-date="'+stops.periods[0]+'" data-cg-monthly="true" data-cg-periods="'+stops.periods.join(',')+'" title="Ver resumo e ocorrências de paradas'+(stops.partial?' · Soma dos dados disponíveis; há períodos ou unidades sem valor informado.':'')+'"><span>Paradas (min)</span><strong'+(stops.minutes==null||!Number.isFinite(stops.target)?'':' class="'+(stops.minutes<=stops.target?'cg-prod-good':'cg-prod-bad')+'"')+'>'+esc(stops.minutes==null?'—':stops.minutes.toLocaleString('pt-BR')+' min')+'</strong></button>':'';
     return productivityWeightMarkup(weight,Number.isFinite(value)&&weightStatus!=='error')+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+productivityMeanMarkup(mean,Number.isFinite(value)&&meanStatus!=='error')+stopsHTML;
    }
    function cell(item,className='',label=''){
@@ -749,7 +764,7 @@ window.PcpCirurgico=(()=>{
     const [production,targets,weight,turns,turnWeights,stops,means,turnMeans]=await Promise.allSettled([productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityTargets.load(apiGet,periods,monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario'),productivityHeads.load(apiGet,periods,'10',monthlyController.signal,false,limit),productivityWeight.load(apiGet,periods,'10',monthlyController.signal,false,limit),apiGet('/api/pcp/comparativo/cirurgico-geral',{ano:[...new Set(periods.map(p=>p.year))].join(','),mes:'1,2,3,4,5,6,7,8,9,10,11,12'},{silent:true,signal:monthlyController.signal}),productivityHeads.load(apiGet,periods,units,monthlyController.signal,false,limit,'diario','Peso Médio'),Promise.all(['1','2'].map(async turn=>(await productivityHeads.load(apiGet,periods,turn,monthlyController.signal,false,limit,'diario','Peso Médio')).map(row=>({...row,_turn:turn})))).then(rows=>rows.flat())]);
     if(production.status==='rejected')throw production.reason;
     if(id!==monthlyGeneration)return;
-    monthlyState={status:'ready',mediaStatus:means.status==='fulfilled'?'ready':'error',turnosMediaStatus:turnMeans.status==='fulfilled'?'ready':'error',turnosPesoStatus:turnWeights.status==='fulfilled'?'ready':'error',paradasStatus:stops.status==='fulfilled'?'ready':'error',medias:means.status==='fulfilled'?means.value:[],turnosMedias:turnMeans.status==='fulfilled'?turnMeans.value:[],paradas:stops.status==='fulfilled'?stops.value.mensal:[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
+    monthlyState={status:'ready',mediaStatus:means.status==='fulfilled'?'ready':'error',turnosMediaStatus:turnMeans.status==='fulfilled'?'ready':'error',turnosPesoStatus:turnWeights.status==='fulfilled'?'ready':'error',paradasStatus:stops.status==='fulfilled'?'ready':'error',medias:means.status==='fulfilled'?means.value:[],turnosMedias:turnMeans.status==='fulfilled'?turnMeans.value:[],paradas:stops.status==='fulfilled'?stops.value.mensal:[],paradasDias:stops.status==='fulfilled'?(stops.value.dias||[]):[],rows:production.value,metas:targets.status==='fulfilled'?targets.value:[],pesos:weight.status==='fulfilled'?weight.value:[],pesoStatus:weight.status==='fulfilled'?'ready':'error',turnosRows:turns.status==='fulfilled'?turns.value:[],turnosPesos:turnWeights.status==='fulfilled'?turnWeights.value:[],turnosStatus:turns.status==='fulfilled'?'ready':'error',limit};
    }catch(e){
     if(id!==monthlyGeneration)return;
     monthlyState={status:'error',rows:[],limit};

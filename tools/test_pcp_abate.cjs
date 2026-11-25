@@ -42,8 +42,8 @@ for(const [value,meta,expected,color] of [[0,0,0,''],[58000,60000,58000/60000*10
  const rating=targets.rating(value,meta),metrics=app.productivityAbate(value,rating);
  assert.equal(metrics.difference,value-meta);assert.equal(metrics.adherence,expected);assert.equal(rating.className,color);
  const markup=app.productivityReferenceMarkup(value,rating);
- assert.match(markup,/Aderência Abate/);assert.doesNotMatch(markup,/NaN|Infinity/);
- if(meta===0)assert.match(markup,/cg-prod-adherence"><span>Aderência Abate<\/span><strong>0,00%/);
+ assert.match(markup,/Aves Abat vs Meta/);assert.doesNotMatch(markup,/NaN|Infinity/);
+ if(meta===0)assert.match(markup,/cg-prod-adherence"><span>Aves Abat vs Meta<\/span><strong>0,00%/);
 }
 assert.match(app.productivityReferenceMarkup(58000,grade(first)),/>96,67%/,'Arredondamento somente na apresentação');
 assert.equal(app.productivityAbate(100,targets.rating(100,null)).adherence,null,'Referência indisponível permanece indisponível');

@@ -281,7 +281,7 @@ window.PcpCirurgico=(()=>{
   const format=number=>number==null?'—':number.toLocaleString('pt-BR',{maximumFractionDigits:6});
   const percent=adherence==null?'—':adherence.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
   const color=meta>0&&rating.className?' class="'+rating.className+'"':'';
-  return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+color+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span><span class="cg-prod-adherence"><span>Aderência Abate</span><strong'+color+'>'+esc(percent)+'</strong></span></span>';
+  return '<span class="cg-prod-reference"><span><span>Meta</span><span>'+esc(format(meta))+'</span></span><span><span title="Realizado menos meta">Diferença</span><strong'+color+'>'+esc((difference>0?'+':'')+format(difference))+'</strong></span><span class="cg-prod-adherence"><span>Aves Abat vs Meta</span><strong'+color+'>'+esc(percent)+'</strong></span></span>';
  }
 
  // Somar apenas minutos informados. Ausência não cancela os demais nem vira zero.

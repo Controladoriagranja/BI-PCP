@@ -195,7 +195,7 @@ module.exports = (async () => {
     productivityHeads: { load(get, periods, units, signal, fullWeek, limit, totalSource, metric) { if(metric)return Promise.resolve([]);return new Promise((resolve, reject) => pending.push({ resolve, reject, signal, fullWeek, limit })); } }
   };
   const controller = source.slice(source.indexOf('  async function refreshHeads('), source.indexOf('  const dialog='));
-  vm.runInNewContext(controller, state);
+  state.refreshEfficiency=()=>{}; vm.runInNewContext(controller,state);
   await state.refreshHeads(); assert.equal(pending.length, 0, 'Rendimento não consulta Cabeças');
   state.indicatorMode = 'produtividade'; const first = state.refreshHeads();
   assert.equal(state.headsState.status, 'loading');

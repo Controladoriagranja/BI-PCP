@@ -62,7 +62,7 @@ module.exports=(async()=>{
     productivityHeads:{load(get,periods,units,signal,fullWeek,limit,totalSource,metric){if(metric)return Promise.resolve([]);if(totalSource!=='diario'){turnQueries.push({periods,units,signal,fullWeek,limit,totalSource});return Promise.resolve([]);}return new Promise((resolve,reject)=>pending.push({periods,units,signal,fullWeek,limit,totalSource,resolve,reject}));}}
   };
   const controller=source.slice(source.indexOf('  async function refreshMonthly('),source.indexOf('  const dialog='));
-  vm.runInNewContext(controller,controllerState);
+  controllerState.refreshEfficiency=()=>{}; vm.runInNewContext(controller,controllerState);
   const first=controllerState.refreshMonthly();assert.equal(pending.length,1);assert.equal(pending[0].fullWeek,false);assert.equal(pending[0].limit,'2026-10-27');
   assert.equal(pending[0].units,'');assert.equal(pending[0].totalSource,'diario','O mensal usa o diário comum para os totais da Ave Nova');
   pending[0].resolve([]);await first;assert.equal(turnQueries.length,1);assert.equal(turnQueries[0].units,'10','Detalhes sempre consultam os dois turnos da Ave Nova');assert.equal(controllerState.monthlyState.turnosStatus,'ready');

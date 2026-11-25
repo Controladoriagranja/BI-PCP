@@ -105,7 +105,7 @@ module.exports=(async()=>{
   productivityTargets:{load:async()=>metas},productivityWeight:{load:async()=>weights},
   productivityHeads:{async load(get,periods,units,signal,fullWeek,limit,totalSource,metric){if(metric)return [];assert.equal(units,'10','Consulta completa para decidir a meta');return [row('2026-11-20',{'1':58000,'2':50000})];}}};
  const controller=source.slice(source.indexOf('  async function refreshHeads('),source.indexOf('  async function refreshMonthly('));
- vm.runInNewContext(controller,controllerState);await controllerState.refreshHeads();
+ controllerState.refreshEfficiency=()=>{}; vm.runInNewContext(controller,controllerState);await controllerState.refreshHeads();
  assert.equal(controllerState.headsState.rows[0].quantidade_cabecas,58000);
  assert.equal(controllerState.headsState.rows[0].turnos['2'],50000);
  assert.equal(grade(controllerState.headsState.rows,'1').meta,65000,'Filtro 1T mantém meta normal quando 2T produziu');

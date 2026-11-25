@@ -887,3 +887,7 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .pcp-report .cg-table td.cg-orange{color:#c45b10}
 :root[data-theme="dark"] .pcp-report .cg-table td.cg-warning{color:#f2d65f}
 :root[data-theme="dark"] .pcp-report .cg-table td.cg-orange{color:#ffa45b}
+
+/* Eficiência consolidada apenas no calendário e acumulado de Produtividade. */
+#cgProdutividade .cg-productivity-efficiency{display:flex;justify-content:space-between;align-items:baseline;gap:4px;width:100%;font-size:12px;line-height:1.3;color:var(--muted-foreground)}
+#cgProdutividade .cg-productivity-efficiency strong{font-size:inherit;text-align:right}

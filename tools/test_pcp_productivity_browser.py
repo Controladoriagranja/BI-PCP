@@ -37,6 +37,7 @@ window.pcpRendimentoSnapshot=()=>{
 fixture.rows.push(...fixture.rows.filter(r=>r.descricao==='Cabeças').map(r=>({...r,descricao:'Peso Médio',quantidade:3.125})));
 window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
+ if(endpoint==='/api/pcp/comparativo/eficiencia-abate')return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v2',dias:['02','03'].flatMap((day,i)=>['10','111'].map(unidade=>({data:'2026-11-'+day,unidade,aves_abatidas_liquidas:unidade==='10'?(i?20000:90000):70000,capacidade_nominal_aves:100000}))).filter(row=>row.data>=p.inicio&&row.data<=p.fim)};
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
   const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
   return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883},{ordem:15,nome:'Paradas de produção (min)',unidade:'min',meta:30}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),mensal:String(p.mes||11).split(',').map(m=>({mes:ano+'-'+String(m).padStart(2,'0'),metas_paradas:{'1':240,'2':240,'10':480,'111':240},valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),semanal:[]};
@@ -81,11 +82,14 @@ TEST = r'''
   checkRendimentoHeader();
   assert(document.getElementById('cgDiario').closest('article').querySelector('[data-indicator-formula]'),'Fórmulas mantidas no diário de Rendimento');
   assert(document.getElementById('cgMensal').closest('article').querySelector('[data-indicator-formula]'),'Fórmulas mantidas no mensal de Rendimento');
+  assert(!pcpTestCalls.some(call=>call.endpoint.endsWith('/eficiencia-abate')),'Rendimento não consulta eficiência de Produtividade');
   flag('produtividade').click();await flush();
   assert(!document.querySelector('#cgProdutividade [data-indicator-formula]'),'Nenhum botão de fórmula na Produtividade');
   assert(document.getElementById('cgAtualizar').hidden&&getComputedStyle(document.getElementById('cgAtualizar')).display==='none','Atualizar oculto em Produtividade');
   const countComparativo=()=>pcpTestCalls.filter(call=>call.endpoint==='/api/pcp/comparativo/cirurgico-geral').length;
+  const efficiencyBeforeTimer=pcpTestCalls.filter(call=>call.endpoint.endsWith('/eficiencia-abate')).length;
   const callsBeforeTimer=countComparativo();for(const timer of pcpTestIntervals)timer.callback();await flush();
+  assert(pcpTestCalls.filter(call=>call.endpoint.endsWith('/eficiencia-abate')).length===efficiencyBeforeTimer,'Eficiência sem atualização automática');
   assert(countComparativo()===callsBeforeTimer,'Produtividade não atualiza automaticamente');
   assert(JSON.stringify([...unit.options].map(o=>o.textContent))===JSON.stringify(['Ave Nova','1° Turno - AN','2° Turno - AN','Real Alimentos']),'Quatro opções com nomes e ordem exatos');
   assert(unit.closest('label').firstChild.textContent==='Unidade / Turno','Nome do filtro único');
@@ -125,7 +129,10 @@ TEST = r'''
    const actual=[...totalCell.querySelectorAll('.cg-production-heads>span>strong')].map(parse);
    assert(JSON.stringify(actual)===JSON.stringify(totals),'Total do calendário '+value+': '+actual+' / '+totals);
    assert(totalCell.querySelector('.cg-prod-adherence strong'),'Aderência nos totais do calendário');
+   assert(totalCell.querySelectorAll('.cg-productivity-efficiency').length===(['1','2'].includes(value)?0:1),'Eficiência omitida só no turno isolado: '+value);
    const monthRow=document.querySelector('[data-cg-month-period="2026-11"]');
+   assert(monthRow.querySelectorAll('.cg-productivity-efficiency').length===3,'Mensal: eficiência apenas AN total, Real e geral');
+   assert(!monthRow.querySelector('[data-cg-month-turn] .cg-productivity-efficiency'),'Mensal sem eficiência de turno');
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
    assert([...document.querySelectorAll('.cg-calendar-mean strong')].some(e=>e.textContent==='3,125'),'Peso Médio usa indicador do diário com três casas');

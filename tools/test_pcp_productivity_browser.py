@@ -38,6 +38,7 @@ fixture.rows.push(...fixture.rows.filter(r=>r.descricao==='Cabeças').map(r=>({.
 window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
  if(endpoint==='/api/pcp/comparativo/eficiencia-abate')return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v2',dias:['02','03'].flatMap((day,i)=>['10','111'].map(unidade=>({data:'2026-11-'+day,unidade,aves_abatidas_liquidas:unidade==='10'?(i?20000:90000):70000,capacidade_nominal_aves:100000}))).filter(row=>row.data>=p.inicio&&row.data<=p.fim)};
+ if(endpoint==='/api/pcp/comparativo/paradas')return {ok:true,cobertura_completa:true,total_ocorrencias:0,total_minutos:0,resumo:[],detalhes:[],meta_rotulo:'Meta original',meta_periodo:540};
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
   const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
   return {ok:true,anos:[2025,2026],ano,mes,data_limite:fixture.limit,ultima_atualizacao:'2026-11-04T08:00:00-03:00',indicadores:[{ordem:1,nome:'Família Asa + Volta',meta:.0883},{ordem:15,nome:'Paradas de produção (min)',unidade:'min',meta:30}],dias:[2,3,5].map(day=>({data:prefix+'-'+String(day).padStart(2,'0'),valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),mensal:String(p.mes||11).split(',').map(m=>({mes:ano+'-'+String(m).padStart(2,'0'),metas_paradas:{'1':240,'2':240,'10':480,'111':240},valores:{'1':[.08,...Array(13).fill(null),20],'2':[.09,...Array(13).fill(null),35],'10':[.085,...Array(13).fill(null),55],'111':[.087,...Array(13).fill(null),40]}})),semanal:[]};
@@ -184,6 +185,11 @@ TEST = r'''
     assert(Math.abs(stopRow.lastElementChild.getBoundingClientRect().right-reference.lastElementChild.getBoundingClientRect().right)<2,'Minutos alinhados à direita com Diferença');
     assert(getComputedStyle(stopRow).fontSize===getComputedStyle(reference).fontSize,'Fonte igual à referência');
    }
+   stop.click();await flush();
+   const dialog=document.querySelector('.cg-production-stops-dialog');assert(dialog.open,'Detalhamento de paradas aberto');
+   const expectedReference=({'1':30,'2':30,'10':60,'111':30,'10,111':90})[value];
+   assert(dialog.querySelector('.cg-stops-status').textContent.includes('Meta do período com produção: '+expectedReference+' min'),'Meta do detalhe por produção');
+   const stopView=dialog.querySelector('select');stopView.value='111';stopView.dispatchEvent(new Event('change',{bubbles:true}));await flush();assert(dialog.querySelector('.cg-stops-status').textContent.includes('Meta do período com produção: 30 min'),'Visão respeita empresa');dialog.querySelector('.cg-stops-close').click();
    const expectedStops={'1':20,'2':35,'10':55,'111':40,'10,111':95};
    assert(parse(stop.querySelector('strong'))===expectedStops[value],'Minutos conforme unidade e turno');
    assert(stop.querySelector('strong').classList.contains(['2','111','10,111'].includes(value)?'cg-prod-bad':'cg-prod-good'),'Meta de 30 por turno e Real; 60 Ave Nova');

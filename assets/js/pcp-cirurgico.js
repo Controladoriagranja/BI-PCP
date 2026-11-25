@@ -291,10 +291,32 @@ window.PcpCirurgico=(()=>{
    target:items.length&&targets.length===items.length?targets.reduce((sum,item)=>sum+item.target,0):null,
    partial:available.length!==items.length||items.some(item=>item.partial)};
  }
+ // Meta de paradas apenas nos dias com aves positivas, por empresa/turno.
+ function productivityStopsReference(data,{dates=null,periods=null},code){
+  if(data.status!=='ready'||!data.limit)return null;
+  const days=dates&&new Set(dates),months=periods&&new Set(periods),keys=code==='geral'?['10','111']:[code];
+  let target=0;
+  for(const key of keys){
+   const turn=key==='1'||key==='2',company=turn?'10':key;
+   const source=turn?(data.turnosRows||data.rows||[]):(data.rows||[]),active=new Set();
+   for(const row of source){
+    if(row.empresa_codigo!==company||!row.data||row.data>data.limit||(days&&!days.has(row.data))||(months&&!months.has(row.data.slice(0,7))))continue;
+    const value=turn?row.turnos?.[key]:row.quantidade_cabecas;
+    if(Number.isFinite(value)&&value>0)active.add(row.data);
+   }
+   for(const date of active){
+    const daily=(data.paradasDias||[]).find(day=>day.data===date);
+    const reference=daily?.metas_paradas?.[key]??(key==='10'?60:30);
+    if(!Number.isFinite(reference))return null;
+    target+=reference;
+   }
+  }
+  return target;
+ }
  function productivityStopsPeriod(data,periods,code){
   const eligible=[...new Set(periods)].filter(period=>data.limit&&period<=data.limit.slice(0,7));
   const result=productivityStopsTotal(eligible.map(period=>{
-   const block=(data.paradas||[]).find(block=>block.mes===period),minutes=block?.valores?.[code]?.[14],target=block?.metas_paradas?.[code];
+   const block=(data.paradas||[]).find(block=>block.mes===period),minutes=block?.valores?.[code]?.[14],target=productivityStopsReference(data,{periods:[period]},code);
    if(Number.isFinite(minutes))return {minutes,target};
    // O backend pode retornar mensal nulo por cobertura parcial, mesmo com dias disponíveis.
    // O mensal informado tem prioridade: nunca somá-lo novamente aos dias.
@@ -488,6 +510,7 @@ window.PcpCirurgico=(()=>{
    if(!days.length)return '';
    const blocks=days.map(d=>(report.dias||[]).find(b=>b.data===d));
    const result=productivityStopsTotal(blocks.flatMap(b=>keys.map(k=>({minutes:b?.valores?.[k]?.[14],target:b?.metas_paradas?.[k]??(k==='10'?60:30)}))));
+   result.target=productivityStopsReference({...getHeads(),paradasDias:report.dias},{dates:days},keys.length===1?keys[0]:'geral');
    if(result.minutes==null)return '<span class="cg-calendar-stops"><span>Paradas (min)</span><span>—</span></span>';
    const {minutes,target,partial}=result;
    return '<button type="button" class="cg-calendar-stops" data-cg-stop="'+(keys.length===1?keys[0]:'geral')+'" data-cg-date="'+days[0]+'" data-cg-dates="'+days.join(',')+'" title="Ver resumo e ocorrências de paradas · Meta: '+target+' min'+(partial?' · Soma dos dados disponíveis; há dias ou unidades sem valor informado.':'')+'"><span>Paradas (min)</span><strong class="'+(minutes<=target?'cg-prod-good':'cg-prod-bad')+'">'+minutes.toLocaleString('pt-BR')+' min</strong></button>';
@@ -881,6 +904,12 @@ window.PcpCirurgico=(()=>{
   const stopDetails=PcpParadas.create(apiGet);
   const condDetails=PcpCondenacoes.create(apiGet);
   function openCond(overrides={}){const selected=selectedColumns();condDetails.open({ano:data.ano,mes:data.mes,dias:fields.Dia.value,visao:selected.length===1?selected[0]:'geral',...overrides});}
+  function productivityStopDetailReference(cell){
+   if(!cell.closest('#cgProdutividade'))return null;
+   const periods=cell.dataset.cgPeriods?.split(','),dates=periods?null:(cell.dataset.cgDates||cell.dataset.cgDate).split(',');
+   const snapshot=periods?monthlyState:{...headsState,rows:[...headsState.rows,...(monthlyState.rows||[])],turnosRows:[...headsState.rows,...(monthlyState.turnosRows||[])],paradasDias:data?.dias||[]};
+   return view=>productivityStopsReference(snapshot,{dates,periods},view);
+  }
   function openStops(overrides={}){const selected=selectedColumns();stopDetails.open({ano:data.ano,mes:data.mes,dias:fields.Dia.value,visao:selected.length===1?selected[0]:'geral',...overrides});}
   function openPlan(period,monthly,unit){
    const q=new URLSearchParams({relatorio:'g6',somente:'aderencia',unidade:unit||selectedColumns().filter(k=>['10','111'].includes(k)).join(',')||'10,111'});
@@ -893,7 +922,7 @@ window.PcpCirurgico=(()=>{
    q.set('retorno',location.search);location.href='index.html?'+q;
   }
   function openLine(order){if(!data)return;activeIndicator=order;mobileLinePeriod='';if(!dialog.open)dialog.showModal();renderLine();}
-  content.addEventListener('click',event=>{const plan=event.target.closest('[data-cg-plan]');if(plan){openPlan(plan.dataset.cgDate,plan.dataset.cgMonthly==='true',plan.dataset.cgPlan);return;}const button=event.target.closest('[data-cg-indicator]');if(button){if(Number(button.dataset.cgIndicator)===16)openPlan();else if(Number(button.dataset.cgIndicator)===15)openStops();else if(Number(button.dataset.cgIndicator)===11)openCond();else openLine(Number(button.dataset.cgIndicator));}const cond=event.target.closest('[data-cg-cond]');if(cond){const v=cond.dataset.cgDate;openCond({ano:v.slice(0,4),mes:String(Number(v.slice(5,7))),dias:cond.dataset.cgMonthly==='true'?undefined:v,visao:cond.dataset.cgCond});}const cell=event.target.closest('[data-cg-stop]');if(cell){const v=cell.dataset.cgDate;if(cell.dataset.cgPeriods){const periods=cell.dataset.cgPeriods.split(',');openStops({ano:[...new Set(periods.map(p=>p.slice(0,4)))].join(','),mes:[...new Set(periods.map(p=>String(Number(p.slice(5,7)))))].join(','),dias:undefined,visao:cell.dataset.cgStop});return;}openStops({ano:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>d.slice(0,4)))].join(','):v.slice(0,4),mes:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>String(Number(d.slice(5,7)))))].join(','):String(Number(v.slice(5,7))),dias:cell.dataset.cgDates||(cell.dataset.cgMonthly==='true'?undefined:v),visao:cell.dataset.cgStop});}});
+  content.addEventListener('click',event=>{const plan=event.target.closest('[data-cg-plan]');if(plan){openPlan(plan.dataset.cgDate,plan.dataset.cgMonthly==='true',plan.dataset.cgPlan);return;}const button=event.target.closest('[data-cg-indicator]');if(button){if(Number(button.dataset.cgIndicator)===16)openPlan();else if(Number(button.dataset.cgIndicator)===15)openStops();else if(Number(button.dataset.cgIndicator)===11)openCond();else openLine(Number(button.dataset.cgIndicator));}const cond=event.target.closest('[data-cg-cond]');if(cond){const v=cond.dataset.cgDate;openCond({ano:v.slice(0,4),mes:String(Number(v.slice(5,7))),dias:cond.dataset.cgMonthly==='true'?undefined:v,visao:cond.dataset.cgCond});}const cell=event.target.closest('[data-cg-stop]');if(cell){const v=cell.dataset.cgDate,productionReference=productivityStopDetailReference(cell);if(cell.dataset.cgPeriods){const periods=cell.dataset.cgPeriods.split(',');openStops({ano:[...new Set(periods.map(p=>p.slice(0,4)))].join(','),mes:[...new Set(periods.map(p=>String(Number(p.slice(5,7)))))].join(','),dias:undefined,visao:cell.dataset.cgStop,productionReference});return;}openStops({ano:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>d.slice(0,4)))].join(','):v.slice(0,4),mes:cell.dataset.cgDates?[...new Set(cell.dataset.cgDates.split(',').map(d=>String(Number(d.slice(5,7)))))].join(','):String(Number(v.slice(5,7))),dias:cell.dataset.cgDates||(cell.dataset.cgMonthly==='true'?undefined:v),visao:cell.dataset.cgStop,productionReference});}});
   dialog.querySelector('.cg-dialog-close').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{if(!dialog.open){activeIndicator=null;graphFilters.closeAll();dialog.classList.remove('cg-maximized');const maximize=dialog.querySelector('#cgMaximizar');maximize.textContent='Maximizar';maximize.setAttribute('aria-pressed','false');if(document.fullscreenElement===dialog)document.exitFullscreen().catch(()=>{});}});dialog.addEventListener('click',event=>{const r=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))dialog.close();});
   dialog.querySelector('#cgMaximizar').onclick=()=>{graphFilters.closeAll();const expanded=dialog.classList.toggle('cg-maximized');const button=dialog.querySelector('#cgMaximizar');button.textContent=expanded?'Restaurar':'Maximizar';button.setAttribute('aria-pressed',String(expanded));if(expanded&&dialog.requestFullscreen){dialog.requestFullscreen().catch(()=>{});}else if(!expanded&&document.fullscreenElement===dialog){document.exitFullscreen().catch(()=>{});}requestAnimationFrame(()=>{lineChart?.resize();renderLine();});};
   const chartObserver=new ResizeObserver(()=>renderLine());chartObserver.observe(chartEl);

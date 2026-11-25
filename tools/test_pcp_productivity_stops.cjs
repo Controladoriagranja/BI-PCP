@@ -6,7 +6,7 @@ const months=element(),detail=element(),notice=element(),root=element();
 root.querySelector=s=>({'.cg-production-months':months,'.cg-production-detail':detail,'.cg-production-notice':notice}[s]);
 const PcpMulti={values:v=>String(v||'').split(',').filter(Boolean),includes:(v,x)=>!v||String(v).split(',').includes(String(x))};
 const context={window:{},ApiScreen:{escape:String},PcpMulti,document:{createElement:tag=>tag==='section'?root:element(),addEventListener(){}},requestAnimationFrame:fn=>fn(),ResizeObserver:class{observe(){}}};
-vm.runInNewContext(source.replace('return {mount};','return {mount,productivityStopsTotal,productivityStopsPeriod,createProductivityCalendar,createProductivityMonthly};'),context);
+vm.runInNewContext(source.replace('return {mount};','return {mount,productivityStopsTotal,productivityStopsPeriod,productivityStopsReference,createProductivityCalendar,createProductivityMonthly};'),context);
 const app=context.window.PcpCirurgico,plain=v=>JSON.parse(JSON.stringify(v)),sum=app.productivityStopsTotal;
 assert.deepEqual(plain(sum([])),{minutes:null,target:null,partial:false});
 assert.deepEqual(plain(sum([{minutes:null,target:30},{minutes:null,target:30}])),{minutes:null,target:60,partial:true},'Sem informação não vira zero');
@@ -63,3 +63,12 @@ const january=cells('data-cg-month-period="2026-01"');assert.match(january[1],/P
 const unchanged=box.innerHTML;
 for(const unit of ['10','1','2','111','10,111']){fields.Unidade.value=unit;fields.Mes.value='8';fields.Dia.value='2026-08-01';monthly.render();assert.equal(box.innerHTML,unchanged,'Mensal mantém as duas unidades e o ano completo');}
 console.log('OK: paradas disponíveis em dias, semanas, dias da semana, mensal/anual; fallback diário; fontes independentes; zeros confirmados; D-1; filtros e ausência sem valores inventados.');
+
+// Sábado sem produção não conta na meta; minutos continuam preservados.
+fields.Mes.value="11";fields.Dia.value="";fields.Unidade.value="10,111";
+for(const r of heads.rows)if(r.data==="2026-11-21"){r.quantidade_cabecas=0;r.turnos={"1":0,"2":0};}
+calendar.render();assert.match(cell("week-2"),/Meta: 450 min/);assert.doesNotMatch(cell("week-2"),/Meta: 540 min/);expectMinutes(cell("week-2"),162);assert.match(cell("month"),/Meta: 450 min/);
+const ref=app.productivityStopsReference,range=["2026-11-16","2026-11-17","2026-11-18","2026-11-19","2026-11-20","2026-11-21"];
+assert.equal(ref(heads,{dates:range},"geral"),450);assert.equal(ref(heads,{dates:range},"10"),300);assert.equal(ref(heads,{dates:range},"111"),150);assert.equal(ref(heads,{dates:range},"1"),150);assert.equal(ref(heads,{dates:range},"2"),150);
+heads.rows.find(r=>r.data==="2026-11-18"&&r.empresa_codigo==="111").quantidade_cabecas=0;assert.equal(ref(heads,{dates:range},"geral"),420,"Exclui por empresa");assert.equal(ref(heads,{dates:["2026-11-21"]},"geral"),0);assert.equal(ref({...heads,limit:"2026-11-19"},{dates:range},"10"),240,"D−1");assert.equal(ref({...heads,rows:[...heads.rows,...heads.rows]},{dates:range},"10"),300,"Não duplica dias");
+const production={...state,rows:heads.rows,turnosRows:heads.rows,paradasDias:report.dias};assert.equal(app.productivityStopsPeriod(production,["2026-11"],"10").target,300,"Meta mensal por dias produtivos");assert.equal(app.productivityStopsPeriod(production,["2026-11","2026-11"],"1").target,150,"Não duplica mês");assert.equal(app.productivityStopsPeriod(production,["2026-11"],"10").minutes,952,"Minutos preservados");

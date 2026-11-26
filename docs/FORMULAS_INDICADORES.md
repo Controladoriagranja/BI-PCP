@@ -25,3 +25,8 @@ Veja [regras, limitações e instalação da API](EFICIENCIA_CAPACIDADE.md).
 ## Eficiência — revisão vigente v2, 25/11/2026
 
 Ave Nova: velocidade fixa 10.800 aves/h (EficiênciaAbate.xlsx!C7), capacidade = horas disponíveis × 10.800; substitui os antigos blocos de 61.000 aves e 9.500 aves/h. Mantém desconto de mortos e pausas de 72 + 60 minutos. Real: 10.000 aves/h e pausa existente de 70 minutos. Semana e mês: razão das somas dos mesmos dias válidos. Esta revisão substitui a descrição anterior de velocidades equivalentes. Detalhes em EFICIENCIA_CAPACIDADE.md e no modal ƒx.
+
+
+## Eficiência — revisão vigente v3, 26/11/2026
+
+Substitui as descrições anteriores da eficiência: Aves abatidas / Capacidade de abate × 100. Aves abatidas são líquidas dos mortos no transporte. AN: 10.800 aves/h, pausas 72 + 60 minutos. Real: 9.500 aves/h, somente intervalo de 70 minutos. Ignorar segundos no tempo disponível. Acumulados usam razão das somas. A referência completa e a instalação estão em EFICIENCIA_V3.md e no modal ƒx.

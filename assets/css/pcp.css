@@ -891,3 +891,10 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 /* Eficiência consolidada apenas no calendário e acumulado de Produtividade. */
 #cgProdutividade .cg-productivity-efficiency{display:flex;justify-content:space-between;align-items:baseline;gap:4px;width:100%;font-size:12px;line-height:1.3;color:var(--muted-foreground)}
 #cgProdutividade .cg-productivity-efficiency strong{font-size:inherit;text-align:right}
+
+/* Links de eficiência apenas na Produtividade, fora do botão que abre Rendimento. */
+#cgProdutividade a.cg-productivity-efficiency{text-decoration:none;border-radius:3px}
+#cgProdutividade a.cg-productivity-efficiency:hover{background:var(--muted);text-decoration:underline}
+#cgProdutividade a.cg-productivity-efficiency:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#cgProdutividade .cg-production-grid td:has(>.cg-productivity-efficiency)>button[data-cg-day]{height:auto;padding-bottom:0}
+#cgProdutividade .cg-production-grid td>.cg-productivity-efficiency{width:auto;margin:1px 8px}

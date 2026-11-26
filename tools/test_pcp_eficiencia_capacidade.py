@@ -47,13 +47,38 @@ class CapacityTests(unittest.TestCase):
         self.assertNotAlmostEqual(expected,sum(r['eficiencia'] for r in rows)/2)
         self.assertAlmostEqual(expected,sum(r['tempo_ideal_horas'] for r in rows)/sum(r['tempo_real_horas'] for r in rows))
 
-    def test_real_time_and_original_rule_preserved(self):
-        row=self.row(unit='111',heads=80000,dead=1000,ideal=79000/10000)
-        row['tempo_real_horas']=10-70/60
-        row['regra_aplicada']={'pausas_minutos':70,'origem_excecao':{'origem':'regra existente'}}
-        self.apply([row]);self.assertEqual(row['tempo_real_horas'],10-70/60)
-        self.assertAlmostEqual(row['velocidade_nominal_equivalente'],10000)
-        self.assertEqual(row['regra_aplicada']['origem_excecao']['origem'],'regra existente')
+    def test_real_fixed_speed_and_only_70_minutes(self):
+        row=self.row(unit='111',heads=73615,tara='16:36:00',ideal=73615/10000)
+        row['tempo_real_horas']=123  # Não herdar tempo ou velocidade antigos.
+        self.apply([row])
+        self.assertAlmostEqual(row['tempo_real_horas'],9+26/60)
+        self.assertEqual(row['velocidade_nominal'],9500)
+        self.assertEqual(row['tempo_ideal_horas'],73615/9500)
+        self.assertAlmostEqual(row['capacidade_nominal_aves'],89616.66666666667)
+        self.assertAlmostEqual(row['eficiencia']*100,82.14431839315604)
+        self.assertEqual(row['regra_aplicada']['pausas_minutos'],70)
+
+    def test_an_november_2(self):
+        row=self.row(heads=101134,day=date(2026,11,2),tara='22:47:00')
+        self.apply([row])
+        self.assertAlmostEqual(row['tempo_disponivel_horas'],14+35/60)
+        self.assertAlmostEqual(row['capacidade_nominal_aves'],157500)
+        self.assertAlmostEqual(row['eficiencia']*100,64.21206349206349)
+
+    def test_seconds_are_ignored_without_rounding_for_both_companies(self):
+        for unit in ['10','111']:
+            rows=[self.row(unit=unit,tara='16:36:'+seconds) for seconds in ['00','01','30','59']]
+            self.apply(rows)
+            for row in rows[1:]:
+                self.assertEqual(row['tempo_real_horas'],rows[0]['tempo_real_horas'])
+                self.assertEqual(row['capacidade_nominal_aves'],rows[0]['capacidade_nominal_aves'])
+                self.assertEqual(row['eficiencia'],rows[0]['eficiencia'])
+
+    def test_mixed_companies_period_does_not_use_average(self):
+        rows=[self.row(heads=65000,tara='14:50:00'),self.row(unit='111',heads=73615,tara='16:36:00')]
+        self.apply(rows)
+        ratio=sum(r['aves_abatidas_liquidas'] for r in rows)/sum(r['capacidade_nominal_aves'] for r in rows)
+        self.assertNotAlmostEqual(ratio,sum(r['eficiencia'] for r in rows)/2)
 
     def test_midnight_uses_full_date_and_saturday_uses_authorized_132_minutes(self):
         row=self.row(day=date(2026,11,23),tara='00:16:00',tara_date=date(2026,11,24));self.apply([row])
@@ -71,7 +96,7 @@ class CapacityTests(unittest.TestCase):
     def test_metadata_and_no_mutation_of_unrelated_fields(self):
         row=self.row();row.update(ticket='123',fonte_cabecas='Abate - Total',campo_extra=42)
         result=self.apply([row]);self.assertEqual(row['campo_extra'],42);self.assertEqual(row['ticket'],'123')
-        self.assertEqual(result['revisao_formulas'],'eficiencia-capacidade-v2')
+        self.assertEqual(result['revisao_formulas'],'eficiencia-capacidade-v3')
         self.assertIn('C3:C4',row['regra_aplicada']['origem_pausas'])
 
     def test_capacity_does_not_depend_on_realized_birds(self):
@@ -86,17 +111,20 @@ class CapacityTests(unittest.TestCase):
         self.assertEqual(result['resumo_semanal'][0]['valores'][0]['eficiencia'],0)
 
     def test_source_api_integration_and_d_minus_one(self):
-        archive=Path(os.environ.get('PCP_API_SOURCE',r'C:\Users\vchaves\Downloads\api_zootecnico(4).zip'))
+        archive=Path(os.environ.get('PCP_API_SOURCE',r'C:\Users\vchaves\Downloads\api_zootecnico(6).zip'))
         if not archive.exists():self.skipTest('ZIP da API necessário para teste de integração local')
-        with zipfile.ZipFile(archive) as z:original=z.read('api_zootecnico/pcp_comparativo.py')
+        with zipfile.ZipFile(archive) as z:
+            original=z.read('api_zootecnico/pcp_comparativo.py')
+            original_helper=z.read('api_zootecnico/pcp_eficiencia_capacidade.py')
+        original_env={};exec(compile(original_helper,'helper-v2','exec'),original_env)
         spec=importlib.util.spec_from_file_location('builder',ROOT/'tools/preparar_api_eficiencia.py');builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
         patched=builder.patch(original)
         names={'empresa','semana','key','numeros','selecionados','horario_tara','calcular_eficiencia'}
-        def load(text):
-            env={'date':date,'datetime':datetime,'timedelta':timedelta,'defaultdict':defaultdict,'math':math,'HTTPException':RuntimeError,'EMPRESAS':{'10':'Ave Nova','111':'Real Alimentos'},'limite_dados':lambda:date(2026,11,24),'aplicar_formula_capacidade':aplicar_formula_capacidade}
+        def load(text,applier):
+            env={'date':date,'datetime':datetime,'timedelta':timedelta,'defaultdict':defaultdict,'math':math,'HTTPException':RuntimeError,'EMPRESAS':{'10':'Ave Nova','111':'Real Alimentos'},'limite_dados':lambda:date(2026,11,24),'aplicar_formula_capacidade':applier}
             tree=ast.parse(text);tree.body=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in names]
             exec(compile(tree,'api-conferida','exec'),env);return env['calcular_eficiencia']
-        before,after=load(original.decode('utf-8-sig')),load(patched.decode('utf-8'))
+        before,after=load(original.decode('utf-8-sig'),original_env['aplicar_formula_capacidade']),load(patched.decode('utf-8'),aplicar_formula_capacidade)
         days=[];tickets=[]
         for uid,company in [('10','Ave Nova'),('111','Real Alimentos')]:
             for d in [date(2026,11,20),date(2026,11,21),date(2026,11,25)]:
@@ -105,10 +133,10 @@ class CapacityTests(unittest.TestCase):
         old=before(days,tickets,date(2026,11,20),date(2026,11,25));new=after(days,tickets,date(2026,11,20),date(2026,11,25))
         self.assertEqual(len(new['dias']),4)
         for a,b in zip(old['dias'],new['dias']):
-            if b['unidade']=='111':self.assertEqual(a['tempo_ideal_horas'],b['tempo_ideal_horas'])
+            if b['unidade']=='111':self.assertEqual(b['tempo_ideal_horas'],109000/9500)
             else:self.assertEqual(b['tempo_ideal_horas'],109000/10800)
             self.assertEqual(a['ticket'],b['ticket'])
-            if b['unidade']=='111':self.assertAlmostEqual(a['eficiencia'],b['eficiencia'])
+            if b['unidade']=='111':self.assertAlmostEqual(b['eficiencia'],a['eficiencia']/0.95)
             else:self.assertAlmostEqual(b['tempo_real_horas'],11-132/60)
 
 

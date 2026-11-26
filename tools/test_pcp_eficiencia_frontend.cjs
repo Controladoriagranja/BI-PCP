@@ -1,7 +1,7 @@
 // Mensal e catálogo: dados sintéticos, sem API real.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const root=path.join(__dirname,'..'),source=fs.readFileSync(path.join(root,'assets/js/pcp-eficiencia.js'),'utf8'),ctx={window:{},ApiScreen:{escape:String}};
-vm.runInNewContext(source.replace('return {mount};','return {mount,monthlySummary};'),ctx);
+vm.runInNewContext(source.replace('return {mount};','return {mount,monthlySummary,filterCalendarDates};'),ctx);
 const rows=[{data:'2026-11-20',unidade:'10',aves_abatidas_liquidas:60000,capacidade_nominal_aves:70000,cabecas:61000,tempo_real_horas:7},{data:'2026-11-23',unidade:'10',aves_abatidas_liquidas:100000,capacidade_nominal_aves:120000,cabecas:101000,tempo_real_horas:12},{data:'2026-11-24',unidade:'10',aves_abatidas_liquidas:999999,capacidade_nominal_aves:null,cabecas:999999,tempo_real_horas:null},{data:'2026-11-20',unidade:'111',aves_abatidas_liquidas:80000,capacidade_nominal_aves:90000,cabecas:81000,tempo_real_horas:9}];
 const summary=ctx.window.PcpEficiencia.monthlySummary(rows)[0];
 assert.equal(summary.valores[0].eficiencia,160000/190000);assert.equal(summary.valores[1].eficiencia,80000/90000);
@@ -10,7 +10,7 @@ assert.notEqual(summary.valores[0].eficiencia,(60000/70000+100000/120000)/2);
 const empty=ctx.window.PcpEficiencia.monthlySummary([{data:'2026-11-20',unidade:'10',aves_abatidas_liquidas:1,capacidade_nominal_aves:0}]);assert.equal(empty[0].valores[0].eficiencia,null);
 vm.runInNewContext(fs.readFileSync(path.join(root,'assets/js/indicator-formulas-data.js'),'utf8'),ctx);
 const docs=ctx.window.IndicatorFormulaCatalog.pages.g5,eff=docs.find(row=>row.nome==='Eficiência');
-assert.equal(eff.formula,'SUM(aves_abatidas_liquidas) / SUM(capacidade_nominal_aves)');
+assert.equal(eff.formula,'Aves abatidas / Capacidade de abate × 100');
 assert.ok(eff.passos.some(text=>text.includes('EficiênciaAbate.xlsx')));
 assert.ok(eff.passos.some(text=>text.includes('10.800')&&text.includes('C7')));
 assert.ok(eff.passos.some(text=>text.includes('não atribui turno_codigo')));
@@ -19,3 +19,13 @@ assert.ok(docs.find(row=>row.nome==='Mortos transporte').formula.includes('Morto
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 for(const file of ['assets/js/pcp-eficiencia.js','assets/js/indicator-formulas-data.js'])assert.ok(index.includes(file+'?v='+crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex').slice(0,12)));
 console.log('OK: mensal por capacidade, dias válidos, unidades separadas, fórmulas, origens e versões de cache.');
+
+assert.ok(eff.passos.some(text=>text.includes('9.500')));assert.ok(eff.passos.some(text=>text.includes('ignorar os segundos')));
+assert.ok(!JSON.stringify(docs).includes('10.000'));assert.ok(!JSON.stringify(docs).includes('/ 10000'));
+const reference=ctx.window.IndicatorFormulaCatalog.references.calcular_eficiencia;
+assert.ok(reference.includes('VELOCIDADE_RA = 9500')&&reference.includes('PAUSAS_RA_MINUTOS = 70'));
+assert.ok(reference.includes('def calcular_eficiencia(')&&reference.includes('SELECT data_abate'));
+const payload={dias:rows.map(row=>({...row,chave_semana:'2026-47'})),resumo_semanal:[{chave:'2026-47',valores:[{unidade:'10'},{unidade:'111'}]}],semanas:[{chave:'2026-47'}]};
+const filtered=ctx.window.PcpEficiencia.filterCalendarDates(payload,['2026-11-20']);
+assert.equal(filtered.dias.length,2);assert.equal(filtered.resumo_semanal[0].valores[0].eficiencia,60000/70000);
+assert.equal(filtered.resumo_semanal[0].valores[1].eficiencia,80000/90000);

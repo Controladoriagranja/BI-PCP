@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import functools
 import html
 import json
@@ -14,7 +15,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'outputs/produtividade-layout'
-EDGE = Path('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')
+EDGE = Path(os.environ.get('PCP_TEST_BROWSER','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'))
 
 SCRIPT = r'''
 window.errors=[];window.addEventListener('error',e=>errors.push(e.message));
@@ -37,7 +38,7 @@ window.pcpRendimentoSnapshot=()=>{
 fixture.rows.push(...fixture.rows.filter(r=>r.descricao==='Cabeças').map(r=>({...r,descricao:'Peso Médio',quantidade:3.125})));
 window.apiGet=async(endpoint,p={})=>{
  pcpTestCalls.push({endpoint,params:p});
- if(endpoint==='/api/pcp/comparativo/eficiencia-abate')return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v2',dias:['02','03'].flatMap((day,i)=>['10','111'].map(unidade=>({data:'2026-11-'+day,unidade,aves_abatidas_liquidas:unidade==='10'?(i?20000:90000):70000,capacidade_nominal_aves:100000}))).filter(row=>row.data>=p.inicio&&row.data<=p.fim)};
+ if(endpoint==='/api/pcp/comparativo/eficiencia-abate')return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v3',dias:['02','03'].flatMap((day,i)=>['10','111'].map(unidade=>({data:'2026-11-'+day,unidade,aves_abatidas_liquidas:unidade==='10'?(i?20000:90000):70000,capacidade_nominal_aves:100000}))).filter(row=>row.data>=p.inicio&&row.data<=p.fim)};
  if(endpoint==='/api/pcp/comparativo/paradas')return {ok:true,cobertura_completa:true,total_ocorrencias:0,total_minutos:0,resumo:[],detalhes:[],meta_rotulo:'Meta original',meta_periodo:540};
  if(endpoint==='/api/pcp/comparativo/cirurgico-geral'){
   const ano=Number(String(p.ano||2026).split(',')[0]),mes=Number(String(p.mes||11).split(',')[0]),prefix=ano+'-'+String(mes).padStart(2,'0');
@@ -131,10 +132,31 @@ TEST = r'''
    assert(JSON.stringify(actual)===JSON.stringify(totals),'Total do calendário '+value+': '+actual+' / '+totals);
    assert(totalCell.querySelector('.cg-prod-adherence strong'),'Aderência nos totais do calendário');
    assert(totalCell.querySelectorAll('.cg-productivity-efficiency').length===(['1','2'].includes(value)?0:1),'Eficiência omitida só no turno isolado: '+value);
+   if(!['1','2'].includes(value)){
+    const dayCell=document.querySelector('[data-cg-day="2026-11-02"]').closest('td');
+    const link=dayCell.querySelector('a[data-cg-efficiency]');assert(link,'Eficiência diária é um link');
+    assert(!link.closest('[data-cg-day]'),'Link fora do botão de Rendimento');
+    const q=new URL(link.href).searchParams;
+    assert(q.get('relatorio')==='g5'&&q.get('data_inicio')==='2026-11-02'&&q.get('data_fim')==='2026-11-02','Link abre eficiência no dia exato');
+    assert(q.get('unidade')===value,'Link preserva empresa(s)');
+    link.addEventListener('click',event=>event.preventDefault(),{once:true});link.click();await flush();
+    assert(flag('produtividade').checked,'Clique em eficiência não abre Rendimento');
+    const week=new URL(document.querySelector('[data-cg-total="week-0"] a[data-cg-efficiency]').href).searchParams;
+    assert(week.get('resumo')==='semana'&&week.get('data_fim')<=fixture.limit,'Link semanal e D−1');
+    const monthLink=new URL(totalCell.querySelector('a[data-cg-efficiency]').href).searchParams;
+    assert(monthLink.get('resumo')==='mes','Total do calendário abre resumo mensal');
+   }
    const monthRow=document.querySelector('[data-cg-month-period="2026-11"]');
    assert(monthRow.querySelectorAll('.cg-productivity-efficiency').length===3,'Mensal: eficiência apenas AN total, Real e geral');
    assert(!monthRow.querySelector('[data-cg-month-turn] .cg-productivity-efficiency'),'Mensal sem eficiência de turno');
    const annualRow=document.querySelector('[data-cg-total-year="2026"]');
+   for(const [selector,company] of [['[data-cg-month-an-total]','10'],['td[data-cg-label="Real Alimentos"]','111'],['td[data-cg-label="Total do mês"]','10,111']]){
+    const q=new URL(monthRow.querySelector(selector+' a[data-cg-efficiency]').href).searchParams;
+    assert(q.get('data_inicio')==='2026-11-01'&&q.get('data_fim')===fixture.limit&&q.get('unidade')===company&&q.get('resumo')==='mes','Link mensal independente do filtro do calendário');
+   }
+   const annual=new URL(annualRow.querySelector('[data-cg-month-an-total] a[data-cg-efficiency]').href).searchParams;
+   assert(annual.get('data_inicio')==='2026-01-01'&&annual.get('data_fim')===fixture.limit,'Link anual respeita período e D−1');
+
    const values=row=>[row.querySelector('[data-cg-month-an-total] .cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Real Alimentos"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total do mês"]>.cg-monthly-quantity>strong'),row.querySelector('td[data-cg-label="Total geral do ano"]>.cg-monthly-quantity>strong')].filter(Boolean).map(parse);
    assert([...document.querySelectorAll('.cg-calendar-mean strong')].some(e=>e.textContent==='3,125'),'Peso Médio usa indicador do diário com três casas');
    assert([...monthRow.querySelectorAll('.cg-calendar-mean strong')].every(e=>e.textContent==='3,125')&&monthRow.querySelectorAll('.cg-calendar-mean').length===5,'Médias mensais ponderadas em todas as colunas');
@@ -317,7 +339,7 @@ def main():
             suffix = '-rendimento' if args.rendimento else ('-monthly' if args.monthly else '')
             command = [str(EDGE), '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
                        '--disable-background-networking', f'--user-data-dir={OUT / ("profile-"+str(width))}',
-                       f'--window-size={width+24},{args.height}', '--force-device-scale-factor=1', '--virtual-time-budget=20000',
+                       f'--window-size={width+(16 if "chrome" in os.environ.get("PCP_TEST_BROWSER", "").lower() else 24)},{args.height}', '--force-device-scale-factor=1', '--virtual-time-budget=20000',
                        f'--screenshot={OUT / (str(width)+suffix+".png")}', '--dump-dom', url]
             if args.baseline:
                 baseline_url = f'http://127.0.0.1:{server.server_port}/outputs/produtividade-layout/baseline.html?relatorio=g8'

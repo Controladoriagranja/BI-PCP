@@ -1,12 +1,14 @@
 """Eficiência da Ave Nova pela capacidade da planilha: 10.800 aves/h fixas.
-Real Alimentos mantém seus parâmetros e o tempo real da regra existente.
+Real Alimentos: 9.500 aves/h, intervalo de 70 min, sem pausa térmica.
 """
 from datetime import date, datetime, time
 from math import isfinite
 
-REVISAO = 'eficiencia-capacidade-v2'
+REVISAO = 'eficiencia-capacidade-v3'
 PAUSAS_AN_MINUTOS = 72 + 60
 VELOCIDADE_AN = 10800
+VELOCIDADE_RA = 9500
+PAUSAS_RA_MINUTOS = 70
 
 
 def numero(value):
@@ -19,30 +21,30 @@ def data_civil(value):
     return value if isinstance(value, date) else date.fromisoformat(str(value)[:10])
 
 
-def tempo_disponivel_an(row):
+def tempo_disponivel(row):
     try:
         inicio = datetime.combine(data_civil(row['data']), time(6))
-        fim = datetime.combine(data_civil(row['data_tara']), time.fromisoformat(str(row['horario_tara'])))
-        horas = (fim - inicio).total_seconds() / 3600 - PAUSAS_AN_MINUTOS / 60
+        fim = datetime.combine(data_civil(row['data_tara']), time.fromisoformat(str(row['horario_tara']))).replace(second=0, microsecond=0)
+        pausas = PAUSAS_AN_MINUTOS if row['unidade'] == '10' else PAUSAS_RA_MINUTOS
+        horas = (fim - inicio).total_seconds() / 3600 - pausas / 60
         return horas if horas > 0 else None
     except (KeyError, ValueError, TypeError, OverflowError):
         return None
+
+
+def tempo_disponivel_an(row):
+    # Compatibilidade com consumidores anteriores; a regra é comum às empresas.
+    return tempo_disponivel({**row, 'unidade': '10'})
 
 
 def aplicar_formula_capacidade(result):
     for row in result['dias']:
         heads, dead = numero(row.get('cabecas')), numero(row.get('mortos_transporte_cab'))
         net = heads - dead if heads is not None and dead is not None and 0 <= dead <= heads else None
-        ideal = numero(row.get('tempo_ideal_horas'))
-        actual = tempo_disponivel_an(row) if row['unidade'] == '10' else numero(row.get('tempo_real_horas'))
-        actual = actual if actual is not None and actual > 0 else None
-        if row['unidade'] == '10':
-            # A capacidade é independente da quantidade realizada.
-            speed = VELOCIDADE_AN
-            ideal = net / speed if net is not None else None
-            row['tempo_ideal_horas'] = ideal
-        else:
-            speed = net / ideal if net is not None and net > 0 and ideal is not None and ideal > 0 else None
+        actual = tempo_disponivel(row)
+        speed = VELOCIDADE_AN if row['unidade'] == '10' else VELOCIDADE_RA
+        ideal = net / speed if net is not None else None
+        row['tempo_ideal_horas'] = ideal
         capacity = actual * speed if actual is not None and speed is not None else None
         row.update(aves_abatidas_liquidas=net, tempo_disponivel_horas=actual,
                    tempo_real_horas=actual, velocidade_nominal=speed, velocidade_nominal_equivalente=speed,
@@ -51,15 +53,18 @@ def aplicar_formula_capacidade(result):
         rule = dict(row.get('regra_aplicada') or {})
         rule.setdefault('tipo_dia', 'sabado' if data_civil(row['data']).weekday() == 5 else 'dia_util' if data_civil(row['data']).weekday() < 5 else 'domingo')
         rule.setdefault('ajuste_ideal_horas', 0)
+        rule['inicio_abate'] = '06:00'
+        rule['velocidade_nominal_aves_hora'] = speed
+        rule['precisao_tempo'] = 'Horas e minutos; segundos ignorados'
+        rule['limite_turnos_aplicado'] = False
         if row['unidade'] == '10':
-            rule['pausas_minutos'] = PAUSAS_AN_MINUTOS
-            rule['velocidade_nominal_aves_hora'] = VELOCIDADE_AN
-            rule['origem_velocidade'] = 'EficiênciaAbate.xlsx!C7: 10.800 aves/h, sem divisão em blocos'
-            rule['limite_turnos_aplicado'] = False
-            rule['origem_pausas'] = 'EficiênciaAbate.xlsx!C3:C4: almoço 72 min + pausa térmica 60 min'
+            rule.update(pausas_minutos=PAUSAS_AN_MINUTOS, almoco_minutos=72, pausa_termica_minutos=60,
+                        origem_velocidade='EficiênciaAbate.xlsx!C7: 10.800 aves/h fixas',
+                        origem_pausas='EficiênciaAbate.xlsx!C3:C4: almoço 72 min + pausa térmica 60 min, inclusive sábado')
         else:
-            rule.setdefault('pausas_minutos', 70)
-            rule['origem_pausas'] = 'Regra existente da Real Alimentos na API; tempo real preservado'
+            rule.update(pausas_minutos=PAUSAS_RA_MINUTOS, intervalo_minutos=70, pausa_termica_minutos=0,
+                        origem_velocidade='Parâmetro da Real confirmado pelo usuário: 9.500 aves/h fixas',
+                        origem_pausas='Real Alimentos: somente intervalo de 70 min, sem pausa térmica')
         row['regra_aplicada'] = rule
         if row['eficiencia'] is not None:
             row['situacao'] = 'calculado'
@@ -85,10 +90,16 @@ def aplicar_formula_capacidade(result):
     result['revisao_formulas'] = REVISAO
     result['regra_eficiencia'] = {
         'formula': 'SUM(aves_abatidas_liquidas) / SUM(capacidade_nominal_aves)',
+        'formula_exibida': 'Aves abatidas / Capacidade de abate × 100',
+        'aves_abatidas': 'Cabeças menos Mortos Transporte (Cab), da mesma seção',
         'capacidade': 'tempo_disponivel_horas * velocidade_nominal',
-        'velocidade_nominal': 'AN: 10800 aves/h fixas; RA: regra existente',
+        'precisao_tempo': 'Horas e minutos; segundos ignorados',
+        'velocidade_nominal': 'AN: 10800 aves/h fixas; RA: 9500 aves/h fixas',
         'turnos': 'AN sem divisão por turnos ou limite de 61.000 aves; mesma velocidade em todo o período',
         'pausas_an_minutos': PAUSAS_AN_MINUTOS,
         'velocidade_an_aves_hora': VELOCIDADE_AN,
+        'velocidade_ra_aves_hora': VELOCIDADE_RA,
+        'intervalo_ra_minutos': PAUSAS_RA_MINUTOS,
+        'pausa_termica_ra_minutos': 0,
     }
     return result

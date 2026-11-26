@@ -1,45 +1,60 @@
-# Eficiência de abate — revisão v2 — 25/11/2026
+# Eficiência de abate — revisão v3 — 26/11/2026
 
-Alteração local; não publicada. A API precisa ser atualizada antes de publicar o frontend.
+## Regra vigente
 
-## Cálculo vigente
+    Eficiência (%) = Aves abatidas / Capacidade de abate × 100
+    Aves abatidas = Cabeças − Mortos Transporte (Cab)
+    Capacidade de abate = velocidade nominal × tempo disponível em horas
+    Tempo ideal de referência = Aves abatidas / velocidade nominal
 
-    aves_liquidas = cabecas - mortos_transporte_cab
-    horas_AN = ultima_tara - data_abate às 06:00 - 132 minutos
-    tempo_ideal_AN = aves_liquidas / 10800
-    capacidade_AN = horas_AN * 10800
-    eficiencia = aves_liquidas / capacidade
+| Empresa | Início | Descontos | Velocidade nominal |
+|---|---|---|---|
+| Ave Nova | 06:00 | Almoço 72 min + pausa térmica 60 min = 132 min, inclusive sábado | 10.800 aves/h |
+| Real Alimentos | 06:00 | Somente intervalo de 70 min; sem pausa térmica | 9.500 aves/h |
 
-Ave Nova usa 10.800 aves/h em todo o período, inclusive sábado, conforme EficiênciaAbate.xlsx, Planilha1!C7. Substitui os antigos blocos de 61.000 aves e velocidades de 10.800/9.500. A capacidade independe da quantidade realizada.
+Usar a data e o horário da última tara válida, preservando a virada da meia-noite. Ignorar segundos e microssegundos no tempo disponível, sem arredondar para o próximo minuto. A velocidade nominal é fixa; não é calculada pela produção realizada.
 
-Planilha: início 06:00 (C2), almoço 72 minutos (C3), pausa térmica 60 minutos (C4). Última tara 14:50 produz 6h38 disponíveis (C6), capacidade de 71.640 aves (C8) e, para 65.000 aves líquidas, eficiência de 90,73143495% (C10/C8). A interface mantém uma casa decimal; não há arredondamento intermediário.
+Semana, mês, ano e combinação das empresas usam soma das aves abatidas / soma das capacidades de abate, com os mesmos registros válidos no numerador e denominador. Não usar média de percentuais. O valor interno da API continua sendo uma razão; a apresentação multiplica por 100 e mantém uma casa decimal.
 
-Real Alimentos mantém velocidade de 10.000 aves/h e tempo real existente, início às 06:00 com desconto de 70 minutos.
+Velocidade da linha é informativa: soma das Cabeças brutas / soma das horas disponíveis. Ela não participa da capacidade nem da eficiência.
 
-## Fontes e acumulação
+## Fontes e tratamento
 
-pcp.diario_industria: data, empresa, secao, descricao, quantidade. Cabeças em Abate - Total; Recepção de Aves Vivas somente quando ausente. Zero não aciona alternativa. Mortos Transporte (Cab) da mesma seção, em cabeças.
+- pcp.diario_industria: data, empresa, secao, descricao, quantidade. Priorizar Cabeças em Abate - Total; usar Recepção de Aves Vivas somente quando ausente. Mortos Transporte (Cab) da mesma seção. Zero em Abate não aciona alternativa.
+- pcp.movimento_geral_pesagem: data_abate, empresa, pesagem, dt_tara, hr_tara e operacao. Usar última tara válida de ENTRADA DE AVES VIVAS. A escolha do último ticket mantém o horário completo; os segundos são descartados no cálculo do tempo.
+- D−1 em Brasília, meta de 95% e resultados acima de 100% preservados. Sem componentes válidos ou capacidade positiva, mostrar —. Quantidade líquida zero com capacidade válida resulta em zero.
+- Não atribuir turnos aos caminhões. A informação de horários sobrepostos não foi usada para inventar uma separação. Turnos isolados da Ave Nova permanecem sem eficiência.
 
-pcp.movimento_geral_pesagem: data_abate, empresa, pesagem, dt_tara, hr_tara, operacao. Última tara válida de ENTRADA DE AVES VIVAS. Preserva data completa quando ocorre após meia-noite.
+## Exemplos conferidos
 
-Cálculo diário por empresa, sem atribuir turnos aos tickets. Não inventa horários de troca; turno_codigo está ausente na amostra. A consulta de eficiência não usa diario_industria_turnos.
+| Caso | Tempo disponível | Capacidade | Eficiência |
+|---|---|---|---|
+| AN: 14:50, 65.000 aves líquidas | 06:38 | 71.640 | 90,73% (tela: 90,7%) |
+| AN 02/11: 22:47, 101.134 aves líquidas | 14:35 | 157.500 | 64,21% (tela: 64,2%) |
+| Real 02/11: 16:36, 73.615 aves líquidas | 09:26 | 89.616,666… | 82,14% (tela: 82,1%) |
 
-Semana e mês: SUM(aves_liquidas) / SUM(capacidades), com os mesmos dias válidos. Sem média de percentuais. D−1, meta 95%, filtros e resultados acima de 100% preservados. Mortos ausentes/inválidos, tara inválida ou tempo não positivo deixam eficiência como —. Líquido zero com capacidade válida resulta em zero. Velocidade realizada da linha continua Cabeças brutas / horas disponíveis.
+## Interface e calendário
 
-## Arquivos
+Na tela de Eficiência, usar os nomes Aves abatidas e Capacidade de abate. O modal ƒx explica a fórmula curta, componentes, parâmetros e acumulação. “Ver regra atual da API” contém o helper final, a seleção dos dados e o SQL do pacote preparado; é uma referência estática dessa revisão, não uma consulta ao código do servidor em tempo real.
 
-backend/eficiencia/pcp_eficiencia_capacidade.py, tools/preparar_api_eficiencia.py, assets/js/pcp-eficiencia.js, assets/js/indicator-formulas-data.js, index.html e testes tools/test_pcp_eficiencia_*. O modal ƒx documenta os componentes e suas origens. Apenas catálogo g5 alterado.
+Somente na Produtividade: o valor da eficiência é um link para index.html?relatorio=g5. Dia abre aquele dia; total semanal abre seu recorte; mensal abre o mês; anual abre o ano até D−1. As empresas seguem a célula clicada. O mensal continua independente do filtro superior de Unidade / Turno e mantém as duas empresas e o total geral.
 
-O pcp-cirurgico.js recebido pelo pull foi preservado integralmente. Seu cache foi atualizado no index.html. Backup pós-pull: outputs/backups/eficiencia-10800-20261125/backup-pos-pull.zip. Nenhuma regra de Produtividade ou Rendimento foi alterada por esta revisão.
+Os links transportam data_inicio, data_fim, unidade e resumo. Quando necessário, datas preserva dias não contíguos ou o filtro Dia. O receptor refaz os acumulados usando somente essas datas. Alterar filtros manualmente ou limpar filtros libera esse recorte. O link fica fora do botão diário que abre Rendimento, evitando navegação conflitante. Valores indisponíveis não são links.
 
-## API no Docker / Portainer
+## Pacote da API atualizado
 
-Pacote: outputs/eficiencia-10800-20261125/api_zootecnico-eficiencia-10800.zip. Base: api_zootecnico(5).zip. pcp_comparativo.py é idêntico nos ZIPs (4) e (5) conferidos; SHA256 aceito: a5c31e6841d4f9818414f722bd74667b12ea23bfb608ca5bcc94c9a9e86aff39.
+Base exclusiva: api_zootecnico(6).zip fornecido pelo usuário. O gerador exige os hashes dos dois módulos conferidos. Apenas pcp_comparativo.py e pcp_eficiencia_capacidade.py mudam; os demais arquivos são preservados byte a byte, excluindo .env e caches Python do pacote de entrega. Não houve mudança de SQL, esquema, banco, dependências ou outros endpoints.
 
-1. Fazer backup da API e comparar a versão. Se houver mudanças adicionais, mesclar somente a eficiência; não sobrescrever API diferente com pacote antigo.
-2. Instalar pcp_comparativo.py e o novo pcp_eficiencia_capacidade.py na mesma pasta. Preservar .env, variáveis, volumes e outros arquivos.
-3. Recriar o serviço no Portainer conforme procedimento atual. Sem novas dependências ou SQL de migração.
-4. Conferir /api/pcp/comparativo/eficiencia-abate: revisao_formulas = eficiencia-capacidade-v2, velocidade_nominal = 10800 na AN e capacidade_nominal_aves = tempo_disponivel_horas * velocidade_nominal.
-5. Publicar frontend somente depois da API. A tela rejeita revisão antiga para não apresentar fórmula nova sobre resultados antigos.
+Entrega: outputs/eficiencia-v3-20261126/api_zootecnico-eficiencia-v3-atualizado.zip.
 
-Pacote exclui .env e caches Python. Não altera ZIPs originais ou planilha. Testes usam dados simulados e código do ZIP, sem reconciliação com banco ou API publicada.
+1. Fazer backup da API em execução e confirmar que corresponde ao ZIP (6). Se houver mudanças posteriores, mesclar antes de substituir.
+2. Instalar os dois módulos alterados na mesma pasta, preservando .env, variáveis e volumes.
+3. Recriar a imagem/serviço pelo procedimento atual do Docker/Portainer.
+4. Conferir /api/pcp/comparativo/eficiencia-abate: revisao_formulas = eficiencia-capacidade-v3; AN 10800, Real 9500; pausas 132/70; tempo sem segundos.
+5. Depois publicar o frontend. Tela de Eficiência e Produtividade exigem v3 para não apresentar fórmulas novas sobre cálculos antigos.
+
+## Validação e backup
+
+Testes locais de cálculo e integração com o código real do ZIP (6), conferência dos demais arquivos do pacote, testes de filtros/cache e regressões da Produtividade. Navegador Chromium com API simulada em 1366, 1440 e 1920 px, incluindo links emitidos pelo calendário, entrada por dia/semana/mês, modal ƒx e comparação de Rendimento com o backup. Sem consulta autenticada à API publicada.
+
+Backup local anterior à instalação: outputs/backups/eficiencia-v3-20261126/backup-oficial.zip. Nada foi publicado automaticamente; ZIP original e planilha não foram alterados.

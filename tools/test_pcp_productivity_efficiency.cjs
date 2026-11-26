@@ -37,10 +37,23 @@ const saved=box.innerHTML;fields.Unidade.value='1';fields.Mes.value='10';fields.
 heads.eficiencia={status:'error',rows:[],error:'API indisponível'};monthly.render();assert.match(box.innerHTML,/Eficiência \(%\)/);assert.doesNotMatch(box.innerHTML,/55,0%/);
 module.exports=(async()=>{
  let calls=0;
- const get=async()=>{calls++;return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v2',dias:rows};};
+ const get=async()=>{calls++;return {ok:true,contrato:'eficiencia-abate-v1',revisao_formulas:'eficiencia-capacidade-v3',dias:rows};};
  await Promise.all([eff.load(get,['2026','2026'],'2026-11-04'),eff.load(get,['2026'],'2026-11-04')]);assert.equal(calls,1,'Calendário e mensal compartilham consulta anual em voo');
  await eff.load(get,['2026'],'2026-11-04');assert.equal(calls,1,'Filtro simples reutiliza cache');
  let attempts=0;const old=async()=>{attempts++;return {ok:true,dias:[]};};
- await assert.rejects(eff.load(old,['2025'],'2026-11-04'),/v2/);await assert.rejects(eff.load(old,['2025'],'2026-11-04'),/v2/);assert.equal(attempts,2,'Erro não permanece em cache');
+ await assert.rejects(eff.load(old,['2025'],'2026-11-04'),/v3/);await assert.rejects(eff.load(old,['2025'],'2026-11-04'),/v3/);assert.equal(attempts,2,'Erro não permanece em cache');
  console.log('OK: eficiência em dias, semanas, mês e ano; turnos omitidos; Real e combinado; D−1; cache anual e API antiga.');
 })();
+
+// Links preservam datas, empresas e a visão semanal/mensal.
+const URLClass=require('node:url').URL;
+const query=markup=>new URLClass(markup.match(/href="([^"]+)"/)[1].replaceAll('&amp;','&'),'http://localhost/').searchParams;
+let link=query(eff.markup(eff.total(rows,{...opts,dates:['2026-11-02']})));
+assert.equal(link.get('relatorio'),'g5');assert.equal(link.get('data_inicio'),'2026-11-02');assert.equal(link.get('data_fim'),'2026-11-02');assert.equal(link.get('unidade'),'10');
+link=query(eff.markup(eff.total(rows,{...opts,companies:['10','111'],dates:['2026-11-02','2026-11-03','2026-11-07']}),'semana'));
+assert.equal(link.get('data_fim'),'2026-11-03');assert.equal(link.get('unidade'),'10,111');assert.equal(link.get('resumo'),'semana');assert.equal(link.get('datas'),'2026-11-02,2026-11-03');
+link=query(eff.markup(eff.total(rows,{...opts,companies:['111'],periods:['2026-11']})));
+assert.equal(link.get('data_inicio'),'2026-11-01');assert.equal(link.get('data_fim'),'2026-11-04');assert.equal(link.get('unidade'),'111');assert.equal(link.get('resumo'),'mes');
+assert.doesNotMatch(eff.markup(null),/href=/,'Sem resultado não cria navegação enganosa');
+heads.eficiencia={status:'ready',rows};fields.Mes.value='11';fields.Dia.value='';fields.Unidade.value='10';calendar.render();
+assert.doesNotMatch(months.innerHTML,/<button[^>]*data-cg-day[^>]*>(?:(?!<\/button>)[\s\S])*<a /,'Link fora do botão que abre Rendimento');

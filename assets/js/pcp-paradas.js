@@ -3,7 +3,7 @@ window.PcpParadas=(()=>{
  const esc=ApiScreen.escape,num=v=>v==null?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2}),pct=v=>(100*v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%',hours=v=>{const seconds=Math.round(Number(v)*60);return String(Math.floor(seconds/3600)).padStart(2,'0')+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0');},day=v=>String(v).slice(0,10).split('-').reverse().join('/'),unit=v=>v==='10'?'Ave Nova':'Real Alimentos';
  function create(api){
   const dialog=document.createElement('dialog');dialog.className='cg-dialog cg-stops-dialog cg-production-stops-dialog';dialog.setAttribute('aria-label','Detalhamento das paradas de produção');
-  dialog.innerHTML='<header class="cg-stops-header"><div><h2>Paradas de produção</h2><p class="cg-stops-context"></p></div><div class="cg-stops-header-actions" style="display:flex;align-items:center;gap:8px"><button type="button" class="button cg-stops-back" hidden>Voltar ao resumo</button><button class="button cg-stops-close" type="button">Fechar</button></div></header><div class="cg-stops-body"><div class="cg-stops-view-filter"><label>Visão <select id="cgStopsVisao" class="cg-stops-view"><option value="geral">Todos os turnos</option><option value="10">Ave Nova — Todos os turnos</option><option value="1">Ave Nova — 1º turno</option><option value="2">Ave Nova — 2º turno</option><option value="111">Real Alimentos — Todos os turnos</option></select></label></div><p class="cg-stops-status" role="status"></p><section><h3>Resumo por tipo de parada</h3><div class="cg-stops-summary pcp-table-scroll"></div></section><section class="cg-stops-detail-section" hidden><h3>Detalhes das ocorrências</h3><div class="cg-stops-details pcp-table-scroll"></div></section></div>';
+  dialog.innerHTML='<header class="cg-stops-header"><div><h2>Paradas de produção</h2><p class="cg-stops-context"></p></div><div class="cg-stops-header-actions" style="display:flex;align-items:center;gap:8px"><button type="button" class="button cg-stops-back" hidden>Voltar ao resumo</button><button class="button cg-stops-close" type="button">Fechar</button></div></header><div class="cg-stops-body"><div class="cg-stops-view-filter"><label>Visão <select id="cgStopsVisao" class="cg-stops-view"><option value="geral">Todos os turnos</option><option value="10">Ave Nova — Todos os turnos</option><option value="1">Ave Nova — 1º turno</option><option value="2">Ave Nova — 2º turno</option><option value="111">Real Alimentos — Todos os turnos</option></select></label></div><h3 class="cg-stops-selection-title"></h3><p class="cg-stops-status" role="status"></p><section><h3>Resumo por tipo de parada</h3><div class="cg-stops-summary pcp-table-scroll"></div></section><section class="cg-stops-detail-section" hidden><h3>Detalhes das ocorrências</h3><div class="cg-stops-details pcp-table-scroll"></div></section></div>';
   document.body.append(dialog);const view=dialog.querySelector('select'),status=dialog.querySelector('.cg-stops-status'),summary=dialog.querySelector('.cg-stops-summary'),detail=dialog.querySelector('.cg-stops-details');const detailSection=detail.closest('section'),summarySection=summary.closest('section');let context={},controller,generation=0,loadedDetails=[],productionReference=null;
   PcpMulti.enhance(dialog.querySelector('.cg-stops-view-filter'));
   const back=dialog.querySelector('.cg-stops-back');
@@ -11,7 +11,23 @@ window.PcpParadas=(()=>{
   function showType(tipo,key){const rows=loadedDetails.filter(r=>key?r.tipo_chave===key:r.tipo===tipo);detailSection.querySelector('h3').textContent='Detalhes das ocorrências — '+tipo;detail.innerHTML=table(['Data','Unidade','Célula','Descrição','Hora inicial','Hora final','Tempo (min)','Observação','Equipamento','Usuário'],rows.map(r=>[day(r.data),unit(r.unidade),r.celula,r.descricao_original??r.tipo,r.hora_inicial,r.hora_final,num(r.minutos),r.observacao,r.equipamento,r.usuario]));summarySection.hidden=true;detailSection.hidden=false;back.hidden=false;}
   back.onclick=()=>{back.hidden=true;detailSection.hidden=true;summarySection.hidden=false;};
   const table=(head,rows)=>'<table><thead><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+esc(v??'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
-  async function load(){const id=++generation;controller?.abort();controller=new AbortController();resetDetail();status.textContent='Carregando paradas…';summary.replaceChildren();detail.replaceChildren();dialog.setAttribute('aria-busy','true');
+  function selectionTitle(){
+   const names=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+   const days=[...new Set(String(context.dias||'').split(',').filter(Boolean))].sort();
+   const months=[...new Set(String(context.mes||'').split(',').map(Number).filter(m=>m>=1&&m<=12))].sort((a,b)=>a-b);
+   const years=String(context.ano||'').split(',').filter(Boolean).join(' e ');
+   const period=days.length===1?day(days[0]):days.length>1?days.length+' dias selecionados ('+day(days[0])+' a '+day(days.at(-1))+')':months.map(m=>names[m-1]).join(' e ')+' de '+years;
+   const views=new Set(String(view.value||'geral').split(','));
+   const labels=[];
+   if(views.has('geral'))labels.push('Real Alimentos + Ave Nova');
+   else{
+    if(views.has('111'))labels.push('Real Alimentos');
+    if(views.has('10'))labels.push('Ave Nova');
+    else for(const shift of ['1','2'])if(views.has(shift))labels.push('Ave Nova — '+shift+'º turno');
+   }
+   dialog.querySelector('.cg-stops-selection-title').textContent=period+' — '+labels.join(' + ');
+  }
+  async function load(){const id=++generation;controller?.abort();controller=new AbortController();resetDetail();selectionTitle();status.textContent='Carregando paradas…';summary.replaceChildren();detail.replaceChildren();dialog.setAttribute('aria-busy','true');
    try{const result=await api('/api/pcp/comparativo/paradas',{...context,visao:view.value||'geral'},{silent:true,signal:controller.signal});if(id!==generation)return;if(!result.ok)throw Error('Consulta não concluída');
     const total=result.cobertura_completa||result.total_ocorrencias?result.total_minutos:null;
     const months=[...new Set(String(context.mes||'').split(',').map(Number).filter(m=>m>=1&&m<=12))].sort((a,b)=>a-b).map(m=>String(context.ano)+'-'+String(m).padStart(2,'0'));
@@ -24,7 +40,7 @@ window.PcpParadas=(()=>{
     summary.innerHTML=table(head,rows);summary.querySelector('tbody tr:last-child')?.classList.add('cg-stops-total');
     loadedDetails=result.detalhes;
     result.resumo.forEach((r,i)=>{const cell=summary.querySelectorAll('tbody tr')[i].firstElementChild;const button=document.createElement('button');button.type='button';button.className='cg-stops-type';button.textContent=r.tipo;button.onclick=()=>showType(r.tipo,r.tipo_chave);cell.replaceChildren(button);});
-    status.textContent=num(result.total_ocorrencias)+' ocorrências · '+(productionReference?'Meta do período com produção':result.meta_rotulo||'Meta diária')+': '+(productionReference?num(productionReference(view.value||'geral'))+' min':result.meta_por_unidade?Object.entries(result.metas_por_unidade||{}).map(([u,m])=>(u==='10'?'Ave Nova':'Real')+' '+num(m)+' min').join('; '):num(result.meta_periodo??result.meta_diaria)+' min')+' · Igual ou abaixo: verde; acima: vermelho'+(result.cobertura_completa?'':' · Cobertura parcial: há dias ainda sem carga confirmada.');
+    status.textContent='Total realizado: '+num(total)+' min · '+num(result.total_ocorrencias)+' ocorrências · '+(productionReference?'Meta do período com produção':result.meta_rotulo||'Meta diária')+': '+(productionReference?num(productionReference(view.value||'geral'))+' min':result.meta_por_unidade?Object.entries(result.metas_por_unidade||{}).map(([u,m])=>(u==='10'?'Ave Nova':'Real')+' '+num(m)+' min').join('; '):num(result.meta_periodo??result.meta_diaria)+' min')+' · Igual ou abaixo: verde; acima: vermelho'+(result.cobertura_completa?'':' · Cobertura parcial: há dias ainda sem carga confirmada.');
    }catch(e){if(e.name!=='AbortError'&&id===generation){status.textContent='Não foi possível carregar as paradas. Tente novamente.';summary.replaceChildren();detail.replaceChildren();}}
    finally{if(id===generation)dialog.setAttribute('aria-busy','false');}
   }

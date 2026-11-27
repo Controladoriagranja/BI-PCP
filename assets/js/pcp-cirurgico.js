@@ -473,7 +473,7 @@ window.PcpCirurgico=(()=>{
    }
    if(!range.length)return '';
    const start=range[0],end=range[range.length-1]<limit?range[range.length-1]:limit;
-   const pairs=[['relatorio','g5'],['data_inicio',start],['data_fim',end],['unidade',[...new Set(companies)].sort().join(',')],['resumo',mode||(periods?'mes':'semana')]];
+   const pairs=[['relatorio','g5'],['origem','produtividade'],['data_inicio',start],['data_fim',end],['unidade',[...new Set(companies)].sort().join(',')],['resumo',mode||(periods?'mes':'semana')]];
    if(dates?.length)pairs.push(['datas',[...new Set(dates.filter(date=>date&&date>=start&&date<=end))].sort().join(',')]);
    if(typeof location!=='undefined'&&location.search)pairs.push(['retorno',location.search]);
    return 'index.html?'+pairs.map(([key,value])=>key+'='+encodeURIComponent(value)).join('&');
@@ -517,7 +517,7 @@ window.PcpCirurgico=(()=>{
    rows=displayRows(rows);
    return rows.length?'<span class="cg-production-heads">'+rows.map(row=>{
     const rating=row._rating||productivityTargets.grade(row.empresa_codigo,row._days||[row],getHeads().metas||[],calendarUnit());
-    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+productivityMeanMarkup(row.peso_medio,emptyZero&&getHeads().mediaStatus!=='error')+(showEfficiency?efficiencyMarkup(row):'')+(showWeight?productivityWeightMarkup(row.peso_vivo,emptyZero&&getHeads().pesoStatus!=='error'):'')+'</span>';
+    return '<span><span title="'+esc(row.empresa)+'">'+esc(headCompanyLabels[row.empresa_codigo]||row.empresa)+'</span><strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(formatHeads(rating.meta))+' aves"':'')+'>'+esc(formatHeads(row.quantidade_cabecas))+' <small>'+birdUnit(row.quantidade_cabecas)+'</small></strong>'+productivityReferenceMarkup(row.quantidade_cabecas,rating)+(showEfficiency?efficiencyMarkup(row)+productivityMeanMarkup(row.peso_medio,emptyZero&&getHeads().mediaStatus!=='error'):'')+(showWeight?productivityWeightMarkup(row.peso_vivo,emptyZero&&getHeads().pesoStatus!=='error'):'')+'</span>';
    }).join('')+'</span>':'<span class="cg-production-empty" aria-hidden="true">—</span>';
   }
   function efficiencyMarkup(row){
@@ -613,7 +613,7 @@ window.PcpCirurgico=(()=>{
      const keys=productivitySelection(calendarUnit()),hasStops=allowed&&date<=state.limit&&(getReport()?.dias||[]).some(block=>block.data===date&&keys.some(key=>(block.valores?.[key]?.[14]??0)>0));
      const emptyDay=state.status==='ready'&&!rows.some(row=>row.quantidade_cabecas>0||row.peso_vivo>0)&&!hasStops;
      const enabled=allowed&&(!onDaySelect||!state.limit||date<=state.limit);
-     return '<td data-cg-label="'+esc(weekdays[new Date(date+'T00:00:00Z').getUTCDay()])+'"'+(classes?' class="'+classes+'"':'')+'><button type="button" data-cg-day="'+date+'" aria-pressed="false" aria-label="'+esc(day+' de '+(outside?monthName(Number(date.slice(0,4)),Number(date.slice(5,7))):label)+' · '+(allowed?(summary||emptyMessage(date)):'Fora do filtro de dia'))+'"'+(enabled?'':' disabled')+'>'+productivityDayHeader(day,date,outside,emptyDay||rows.length>1?[]:rows,state.status==='ready'&&date<=state.limit&&state.pesoStatus!=='error')+(emptyDay?'':headsMarkup(rows,rows.length>1,state.status==='ready'&&date<=state.limit&&allowed,false))+'</button>'+(emptyDay?'':rows.map(efficiencyMarkup).join(''))+(emptyDay?'':stopsMarkup(allowed?[date]:[]))+'</td>';
+     return '<td data-cg-label="'+esc(weekdays[new Date(date+'T00:00:00Z').getUTCDay()])+'"'+(classes?' class="'+classes+'"':'')+'><button type="button" data-cg-day="'+date+'" aria-pressed="false" aria-label="'+esc(day+' de '+(outside?monthName(Number(date.slice(0,4)),Number(date.slice(5,7))):label)+' · '+(allowed?(summary||emptyMessage(date)):'Fora do filtro de dia'))+'"'+(enabled?'':' disabled')+'>'+productivityDayHeader(day,date,outside,emptyDay||rows.length>1?[]:rows,state.status==='ready'&&date<=state.limit&&state.pesoStatus!=='error')+(emptyDay?'':headsMarkup(rows,rows.length>1,state.status==='ready'&&date<=state.limit&&allowed,false))+'</button>'+(emptyDay?'':'<span class="cg-production-day-metrics">'+rows.map(row=>efficiencyMarkup(row)+productivityMeanMarkup(row.peso_medio,state.status==='ready'&&date<=state.limit&&allowed&&state.mediaStatus!=='error')).join('')+'</span>')+(emptyDay?'':stopsMarkup(allowed?[date]:[]))+'</td>';
     });
     const weeks=Array.from({length:dates.length/7},(_,week)=>{
      const monday=new Date(Date.UTC(year,month-1,2-new Date(Date.UTC(year,month-1,1)).getUTCDay()+week*7)).toISOString().slice(0,10),number=productionWeek(monday);
@@ -717,7 +717,7 @@ window.PcpCirurgico=(()=>{
    function cellMarkup({value,weight,mean,rating,stops,meanStatus,weightStatus,efficiency}){
     const quantity=value==null?'—':'<strong'+(rating.className?' class="'+rating.className+'" title="Meta: '+esc(rating.meta.toLocaleString('pt-BR'))+' aves"':'')+'>'+esc(value.toLocaleString('pt-BR',{maximumFractionDigits:6}))+'</strong> <small>'+(value===1?'ave':'aves')+'</small>';
     const stopsHTML=stops?.periods?.length?'<button type="button" class="cg-monthly-stops" data-cg-stop="'+stops.view+'" data-cg-date="'+stops.periods[0]+'" data-cg-monthly="true" data-cg-periods="'+stops.periods.join(',')+'" title="Ver resumo e ocorrências de paradas'+(stops.partial?' · Soma dos dados disponíveis; há períodos ou unidades sem valor informado.':'')+'"><span>Paradas (min)</span><strong'+(stops.minutes==null||!Number.isFinite(stops.target)?'':' class="'+(stops.minutes<=stops.target?'cg-prod-good':'cg-prod-bad')+'"')+'>'+esc(stops.minutes==null?'—':stops.minutes.toLocaleString('pt-BR')+' min')+'</strong></button>':'';
-    return productivityWeightMarkup(weight,Number.isFinite(value)&&weightStatus!=='error')+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+productivityMeanMarkup(mean,Number.isFinite(value)&&meanStatus!=='error')+(efficiency===undefined?'':productivityEfficiency.markup(efficiency))+stopsHTML;
+    return productivityWeightMarkup(weight,Number.isFinite(value)&&weightStatus!=='error')+'<span class="cg-monthly-quantity">'+quantity+'</span>'+productivityReferenceMarkup(value,rating)+(efficiency===undefined?'':productivityEfficiency.markup(efficiency))+productivityMeanMarkup(mean,Number.isFinite(value)&&meanStatus!=='error')+stopsHTML;
    }
    function cell(item,className='',label=''){
     return '<td data-cg-label="'+esc(label)+'"'+(className?' class="'+className+'"':'')+'>'+cellMarkup(item)+'</td>';

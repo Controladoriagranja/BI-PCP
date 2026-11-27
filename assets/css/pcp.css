@@ -898,3 +898,10 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 #cgProdutividade a.cg-productivity-efficiency:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 #cgProdutividade .cg-production-grid td:has(>.cg-productivity-efficiency)>button[data-cg-day]{height:auto;padding-bottom:0}
 #cgProdutividade .cg-production-grid td>.cg-productivity-efficiency{width:auto;margin:1px 8px}
+
+/* Ordem diária igual aos totais: Aves Abat vs Meta, Eficiência, Peso médio. */
+#cgProdutividade .cg-production-day-metrics{display:block;min-width:0;margin:1px 8px 0}
+#cgProdutividade .cg-production-grid td:has(>.cg-production-day-metrics)>button[data-cg-day]{height:auto;padding-bottom:0}
+
+/* Resultado correspondente ao clique vindo da Produtividade. */
+.ef-table td[data-ef-calendar-target]{box-shadow:inset 0 0 0 2px var(--primary)}

@@ -25,12 +25,17 @@ async function main(){
    for(const f of ['filters.js','pcp-multiselect.js'])await page.addScriptTag({content:await fs.readFile(path.join(root,'assets/js',f),'utf8')});
    await page.addScriptTag({content:source});await page.evaluate(()=>PcpEficiencia.mount());
    const wait=()=>page.waitForFunction(()=>document.getElementById('estadoConsulta').textContent.startsWith('Dados reais'));
-   await wait();const box=page.locator('#efOutlierAlert');assert.equal(await box.isVisible(),true);assert.equal(await box.evaluate(el=>el.open),false);
-   assert.match(await box.locator('summary').textContent(),/4 casos/);assert.equal(await page.locator('#pcpConteudo').evaluate(el=>el.firstElementChild.id),'efOutlierAlert');
+   await wait();const box=page.locator('#efOutlierAlert');
+   const parameters=page.locator('.ef-parameters');assert.equal(await parameters.isVisible(),true);assert.equal(await parameters.locator('tbody tr').count(),2);
+   const parameterRows=await parameters.locator('tbody tr').allTextContents();assert.match(parameterRows[0],/10\.800.*72 min.*60 min.*132 min/);assert.match(parameterRows[1],/9\.500.*70 min.*Não tem.*70 min/);
+   const left=await box.boundingBox(),right=await parameters.boundingBox();if(width>900){assert(right.x>=left.x+left.width);assert(Math.abs(right.width-left.width)<2);}else assert(right.y>=left.y+left.height);
+assert.equal(await box.isVisible(),true);assert.equal(await box.evaluate(el=>el.open),false);
+   assert.match(await box.locator('summary').textContent(),/4 casos/);assert.equal(await page.locator('#pcpConteudo').evaluate(el=>el.firstElementChild.id),'efTopPanels');
+   assert(left.height<55,'Alerta recolhido compacto');assert(right.height<180,'Parâmetros compactos');assert.equal(await parameters.evaluate(el=>el.scrollWidth<=el.clientWidth),true);await page.screenshot({path:path.join(out,'compacto-'+width+'.png')});
    await box.locator('summary').click();assert.equal(await box.locator('li').count(),4);assert.match(await box.textContent(),/112,0%/);assert.match(await box.textContent(),/49,0%/);
    await page.screenshot({path:path.join(out,'alerta-'+width+'.png')});
    await page.evaluate(()=>{const f=document.getElementById('efUnidade');f.value='111';f.dispatchEvent(new Event('change',{bubbles:true}));});await page.waitForFunction(()=>document.querySelectorAll('#efOutlierAlert li').length===1);assert.match(await box.locator('li').textContent(),/Real Alimentos/);
-   await page.evaluate(()=>{document.getElementById('efInicio').value='2026-11-17';const f=document.getElementById('efFim');f.value='2026-11-18';f.dispatchEvent(new Event('change',{bubbles:true}));});await page.waitForFunction(()=>document.getElementById('efOutlierAlert').hidden);assert.equal(await box.locator('li').count(),0);
+   await page.evaluate(()=>{document.getElementById('efInicio').value='2026-11-17';const f=document.getElementById('efFim');f.value='2026-11-18';f.dispatchEvent(new Event('change',{bubbles:true}));});await page.waitForFunction(()=>document.getElementById('efOutlierAlert').hidden);assert.equal(await parameters.isVisible(),true);assert.equal(await box.locator('li').count(),0);
    await page.locator('#efLimpar').click();await page.waitForFunction(()=>document.querySelectorAll('#efOutlierAlert li').length===4);assert.equal(await box.evaluate(el=>el.open),false);
    await page.locator('#efSemana>button').click();await page.locator('#efSemana input[value="2026-47"]').click();await page.waitForFunction(()=>document.querySelectorAll('#efOutlierAlert li').length===3);assert.doesNotMatch(await box.textContent(),/23\/11\/26/);
    // Recorte não contíguo recebido do calendário também restringe os casos.

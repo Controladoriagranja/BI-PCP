@@ -915,3 +915,23 @@ body.pcp-report[data-page="report-g7"] .checkbox-multiselect-trigger{min-height:
 .ef-outlier-alert>ul{max-height:230px;overflow:auto;margin:8px 0 0;padding-left:18px;overflow-wrap:anywhere}
 .ef-outlier-alert>ul>li{margin:0 0 8px}
 .ef-outlier-alert>ul>li>span{font-size:11px;color:var(--muted-foreground)}
+
+/* Faixa de contexto da Eficiência: alertas e parâmetros em blocos independentes. */
+.ef-top-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;min-width:0}
+.ef-top-panels>.ef-outlier-alert{grid-column:1}
+.ef-parameters{grid-column:2;min-width:0;padding:8px 10px}
+.ef-parameters>h2{margin:0 0 4px;font-size:12px;font-weight:650;color:var(--primary)}
+.ef-parameters-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px;line-height:1.3}
+.ef-parameters-table col:nth-child(1){width:20%}.ef-parameters-table col:nth-child(2){width:12%}.ef-parameters-table col:nth-child(3){width:20%}.ef-parameters-table col:nth-child(4){width:18%}.ef-parameters-table col:nth-child(5),.ef-parameters-table col:nth-child(6){width:15%}
+.ef-parameters-table th,.ef-parameters-table td{padding:3px 4px;border-bottom:1px solid var(--border);text-align:right;vertical-align:middle;overflow-wrap:normal}
+.ef-parameters-table thead th{font-size:10px;font-weight:500;color:var(--muted-foreground);border-bottom-color:var(--primary)}
+.ef-parameters-table th:first-child{text-align:left}.ef-parameters-table tbody th{font-weight:550}
+.ef-parameters-table tbody tr:nth-child(even){background:var(--muted)}
+.ef-parameters-note{margin:4px 0 0;font-size:10px;line-height:1.4;color:var(--muted-foreground)}
+@media(max-width:900px){.ef-top-panels{grid-template-columns:minmax(0,1fr);gap:10px}.ef-top-panels>.ef-outlier-alert,.ef-parameters{grid-column:1}}
+
+/* Sinal de atenção discreto, sem aumentar a altura do alerta recolhido. */
+.ef-top-panels>.ef-outlier-alert{padding:8px 10px;border-inline-start:3px solid var(--primary)}
+.ef-top-panels>.ef-outlier-alert>summary{color:var(--primary)}
+.ef-top-panels>.ef-outlier-alert>summary::before{content:" ! ";display:inline-grid;place-items:center;width:16px;height:16px;margin-inline-end:6px;border:1px solid currentColor;border-radius:50%;font-size:10px;line-height:1;vertical-align:middle}
+.ef-top-panels>.ef-outlier-alert>ul{max-height:160px}

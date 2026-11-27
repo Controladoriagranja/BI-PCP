@@ -967,11 +967,11 @@ window.PcpCirurgico=(()=>{
   function renderStopsWarning(){
    let box=document.getElementById('cgParadasAviso');
    if(!box){box=document.createElement('aside');box.id='cgParadasAviso';box.setAttribute('role','status');box.className='pcp-report-notice';box.style.cssText='background:#fff4d8;border:1px solid #dbb35d;border-radius:8px;padding:12px 16px;margin:12px 0;color:#663e08';document.getElementById('estadoConsulta').insertAdjacentElement('afterend',box);}
-   const check=data?.conciliacao_paradas,show=selectedColumns().some(k=>['1','2','10'].includes(k)),diff=check?.divergencias||[];
+   const history=data?.conciliacao_paradas_historico,check=history||data?.conciliacao_paradas,show=Boolean(history)||selectedColumns().some(k=>['1','2','10'].includes(k)),diff=check?.divergencias||[];
    box.hidden=!show||!diff.length;
    if(box.hidden){box.replaceChildren();return;}
    const date=v=>v.split('-').reverse().join('/'),minutes=v=>Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2})+' min';
-   box.innerHTML='<strong>Atenção: as paradas da Ave Nova não conferem entre os relatórios.</strong><p>O geral e os turnos foram preservados conforme o Agrosys. Confira os registros no sistema e atualize a carga após o ajuste.</p><details><summary>Ver '+diff.length+' dia(s) com diferença</summary><ul>'+diff.map(r=>'<li>'+esc(date(r.data))+': 1º turno '+esc(minutes(r.primeiro_turno))+' + 2º turno '+esc(minutes(r.segundo_turno))+' = '+esc(minutes(r.soma_turnos))+'; geral '+esc(minutes(r.geral))+'; diferença '+esc(minutes(r.diferenca_minutos))+'.</li>').join('')+'</ul></details>';
+   box.innerHTML='<strong>Atenção: '+diff.length+' dia(s) com divergência nas paradas da Ave Nova.</strong><p>'+(history?'Pendências de todo o histórico, independentemente do mês e da unidade selecionados. ':'')+'O geral e os turnos foram preservados conforme o Agrosys. Confira os registros no sistema e atualize a carga após o ajuste.</p><ul style="max-height:220px;overflow:auto">'+diff.map(r=>'<li>'+esc(date(r.data))+': 1º turno '+esc(minutes(r.primeiro_turno))+' + 2º turno '+esc(minutes(r.segundo_turno))+' = '+esc(minutes(r.soma_turnos))+'; geral '+esc(minutes(r.geral))+'; diferença '+esc(minutes(r.diferenca_minutos))+'.</li>').join('')+'</ul>';
   }
   function render(){
    monthFilter.sync(indicatorMode);
